@@ -1,13 +1,22 @@
 # Requerimentos
 * La tarifa consiste en $ 85 al momento de iniciar el viaje
-* $ 9 por cada 200 metros de recorrido o minuto de espera en caso de estar el vehículo detenido
+* $9 por cada 200 metros de recorrido o minuto de espera en caso de estar el vehículo detenido
 * Entre las 22 y las 6 h rige una tarifa nocturna con un incremento del 20% en el valor del viaje. (provisorio)
 * Aumento de 5 fichas por bulto
 
-> Valor ficha: $9.
+> Valor ficha: $9
 
 # Desarrollo
 ## Flujo
+Posterior a las configuraciones de todos los perifericos que se va a usar.
+Tenemos 3 modos:
+ 1. Taximetro parado, muestra un P en el modo y led en verde.
+ 2. Taximetro en funcionamiento, el adc muestrea y aumenta, luz roja.
+ 3. Modo detenido, muestra la informacion pero el adc la distancia no se esta contando.
+
+En el modo 2, vamos a interrumpir cada muestra de ADC, el valor muestreado se convierte a velocidad y de velocidad se multiplica por el tiempo de muestreo (*1 segundo*), esto se suma a la variable global **distancia**, dentro del main, al salir de la interrupcion, dentro de la rutina del modo 2, chequeamos si la variable global **distancia** es mayor que 200, si es asi, se aumenta en 9 (*valor ficha*) la variable global **tarifa**. Si el ADC muestrea 0, significa que el vehiculo esta detenido, entonces comienza a contar el timer 1, este hace match cada 1 minuto, si hace match, aumenta la varible global **tarifa** una ficha. Si el adc detecta que el el valor muestreado es distinto de 0, apaga el timer 1 y hace lo que comente antes. Ademas, la rutina de modo 2, formatea la informacion para que el dma la envie al uart y esta haga la muestra de informacio.
+
+El modo 3, a diferencia del modo 2, debe dejar de muestrear y cambiar el valor de la variable global **tarifa**. 
 
 
 ## Configuraciones
