@@ -14,6 +14,7 @@ void confGPIO(void); // Prototipo de la funcion de conf. de puertos
 //void confADC(void);
 void confExtInt(void); //Prototipo de la funcion de conf. de interrupciones externas
 //void confTimer(void);
+uint8_t get_TeclaMatrical(void);
 
 
 #define OUTPUT 1
@@ -27,7 +28,13 @@ void confExtInt(void); //Prototipo de la funcion de conf. de interrupciones exte
 
 int main(void)
 {
+	confGPIO();
+	confExtInt();
 
+	while(1)
+	{
+
+	}
     return 0;
 }
 void confGPIO(void)
@@ -71,6 +78,7 @@ void confGPIO(void)
 	PINSEL_ConfigPin(&PinCfg);
 
 	GPIO_SetDir(PINSEL_PORT_0, LEDS, OUTPUT);
+	FIO_ByteSetValue(2, 0, (0xF<<4));
 
 	return;
 }
@@ -85,13 +93,42 @@ void confExtInt(void)
 }
 void EINT3_IRQHandler(void)
 {
+	uint8_t tecla=get_TeclaMatrical();
+	GPIO_ClearInt(PINSEL_PORT_2, IN_TECLADO);
 
-
-
+	return;
 }
 uint8_t get_TeclaMatrical(void)
 {
+	uint8_t fila=0,
+			columna=0;
 
+	while(fila!=4)
+	{
+		if(GPIO_ReadValue(2)&(1<<fila))
+			break;
+
+		fila++;
+	}
+	if(fila>=4)
+	{
+		return 4;
+	}
+	while(columna!=4)
+	{
+
+		LPC_GPIO2->FIOPIN0= ~(1<<(4+columna));
+		if(!((FIO_ByteReadValue(2,0))&(0xF)))
+			break;
+
+		columna++;
+	}
+	if(columna>=4)
+	{
+		return 4;
+	}
+	FIO_ByteSetValue(2, 0, (0xF<<4));
+	return fila*4+columna;
 }
 /*
 
