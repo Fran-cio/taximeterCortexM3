@@ -42,7 +42,7 @@ Mostrar en pantalla la informacion de manera generica
 Enviar la informacion donde este la tarifa y el modo al UART para mostrar la info en la pantalla
 
 ### Teclado Matricial
-Se mandan 1 por los pines 2.4,2.5,2.6,2.7 (*columnas*) y se activan las interrupciones por flaco de subida en los pines 2.0,2.1,2.2,2.3 (*filas*); los cuales estan conectados a a pulldown. Al apretarse un boton, en la rutina de interrupcion, observamos cual es el pin en 1, seguido de esto, guardamos este valor como la fila ingresada, seguido de esto, barremos con un 0 las columnas, hasta encontrar donde el valor en las columnas es 0. Ahi guardamos el valor de columna, multiplicando este valor por el de filas, obtenemos la coordenada dentro del teclado contando desde arriba a la derecha hasta abajo a la izquierda.
+Se mandan 1 por los pines 2.4,2.5,2.6,2.7 (*columnas*) y se activan las interrupciones por flaco de subida en los pines 2.0,2.1,2.2,2.3 (*filas*); los cuales estan conectados a a pulldown. Al apretarse un boton, en la rutina de interrupcion, observamos cual es el pin en 1, seguido de esto, guardamos este valor como la fila ingresada, seguido de esto, barremos con un 0 las columnas, hasta encontrar donde el valor en las columnas es 0. Ahi guardamos el valor de columna, entonces haciendo la cuenta *4.fila+columna* , obtenemos la coordenada dentro del teclado contando desde arriba a la derecha hasta abajo a la izquierda.
 
 ### Timer 1
 Configurado para contar 1 minuto y si se cumple, aumenta la tarifa una ficha.

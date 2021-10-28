@@ -1,8 +1,8 @@
 /*
-===============================================================================
- Name        : Taximetro.c
- Author      : Grupo 1
- Description : Un taximetro hecho para el integrador de Digitales 3
+	 ===============================================================================
+Name        : Taximetro.c
+Author      : Grupo 1
+Description : Un taximetro hecho para el integrador de Digitales 3
 ===============================================================================
 */
 
@@ -12,38 +12,45 @@
 #include "lpc17xx_adc.h"
 #include "lpc17xx_timer.h"
 #include "lpc17xx_clkpwr.h"
+#include "lpc17xx_gpdma.h"
+#include "lpc17xx_uart.h"
 
-
-
-
+/*---------------------------------------------------Configs----------------------------------------------------------------------------------------*/
 void confGPIO(void); // Prototipo de la funcion de conf. de puertos
 void configADC(void);
 void config_timer(void);
 void confExtInt(void); //Prototipo de la funcion de conf. de interrupciones externas
 void change_state(uint8_t state);
 void config_timer_1(void);
-
-
+void confUART(void);
+void confDMA(void);
+/*---------------------------------------------------main----------------------------------------------------------------------------------------*/
 void rutina_1(void); // poner un nombre mas representativo
 void rutina_2(void);
 void rutina_3(void);
-
-//void confTimer(void);
+void bucle(void);
+/*---------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*---------------------------------------------------Utilidades----------------------------------------------------------------------------------------*/
+void actualizar_mensaje(void);
 uint8_t get_TeclaMatrical(void);
-
+/*---------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*---------------------------------------------------DEFINES----------------------------------------------------------------------------------------*/
+#define De_uS_mS(num) (num*100000)
+#define De_uS_S(num) (num*1000000)
 
 #define OUTPUT 1
 #define INPUT 0
 #define IN_TECLADO 0XF
 #define OUT_TECLADO (0XF << 4)
 
-#define F_MUESTREO 200000
 #define CHANNEL_0 0
 #define LEDS_RED (1 << 4)
 #define LEDS_GREEN (1 << 5)
 #define BUZZER (1 << 6)
 
 #define TIMEMUESTREO 1
+#define F_MUESTREO 200000
+
 
 #define EDGE_RISING 0
 #define LENGTH 16
@@ -55,21 +62,28 @@ uint8_t get_TeclaMatrical(void);
 #define OCUPADO 2
 #define STOP  3
 
+#define DMA_SIZE 7
+
 #define VALOR_FICHA 9
 #define DISTANCIA_FICHA 200
+/*---------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------Variables Globales-------------------------------------------------------------------------*/
 
-uint8_t modo = LIBRE;
-uint16_t tarifa = 0;
-uint16_t distancia = 0;
-uint8_t car_state = 0;
+uint8_t static modo = LIBRE;
+uint16_t static tarifa = 0;
+uint16_t static distancia = 0;
+uint8_t static car_state = 0;
 volatile uint16_t ADC0Value = 0;
 
-uint8_t teclado_matricial[LENGTH] = {1,2,3,0xA, \
-									4,5,6,0XB, \
-									7,8,9,0xC, \
-									0XE,0,0XE,0XD
-								  };
+uint8_t const teclado_matricial[LENGTH] = {	1,2,3,0xA, \
+	4,5,6,0XB, \
+		7,8,9,0xC, \
+		0XE,0,0XE,0XD
+};
+uint8_t mensaje[] = {"\rM\t0000"};
 
+/*---------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------Programa-------------------------------------------------------------------------*/
 int main(void)
 {
 	confGPIO();
@@ -77,8 +91,15 @@ int main(void)
 	configADC();
 	config_timer();
 	config_timer_1();
+	confUART();
+	confDMA();
 
+	bucle();
 
+	return 0;
+}
+void bucle(void)
+{
 	while(1)
 	{
 		switch (modo)
@@ -97,8 +118,8 @@ int main(void)
 		}
 
 	}
-    return 0;
 }
+
 /* Pasa del estado ocupado o en stop al estado libre */
 void rutina_1(void)
 {
@@ -107,12 +128,15 @@ void rutina_1(void)
 	TIM_Cmd(LPC_TIM1, DISABLE);
 
 	tarifa = 0;
+	distancia=0;
 
+	actualizar_mensaje();
 	while (modo == LIBRE)
 	{
 	}
 	return;
 }
+
 /* Pasa del estado ocupado o en stop al estado libre */
 void rutina_2(void)
 {
@@ -120,22 +144,25 @@ void rutina_2(void)
 	TIM_ResetCounter(LPC_TIM0);
 	TIM_Cmd(LPC_TIM0, ENABLE);
 
-	tarifa = 0;
+	actualizar_mensaje();
 	while (modo == OCUPADO)
 	{
 		if (distancia > DISTANCIA_FICHA)
 		{
 			tarifa += VALOR_FICHA;
 			distancia = 0;
+			actualizar_mensaje();
 		}
 	}
 	return;
 }
+
 void rutina_3(void)
 {
 	TIM_Cmd(LPC_TIM0, DISABLE);
 	TIM_Cmd(LPC_TIM1, DISABLE);
 
+	actualizar_mensaje();
 	while (modo == STOP)
 	{
 
@@ -143,21 +170,9 @@ void rutina_3(void)
 	return;
 }
 
-void change_state(uint8_t state)
-{
-	if (state == LIBRE)
-	{
-		GPIO_SetValue(PINSEL_PORT_0, (LEDS_GREEN));
-		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_RED));
-	}
-	if (state == OCUPADO)
-	{
-		GPIO_SetValue(PINSEL_PORT_0, (LEDS_RED));
-		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_GREEN));
-	}
+/*---------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*---------------------------------------------------Configs----------------------------------------------------------------------------------------*/
 
-	return;
-}
 void confGPIO(void)
 {
 	uint8_t i;
@@ -208,6 +223,7 @@ void confGPIO(void)
 
 	return;
 }
+
 void configADC(void)
 {
 	PINSEL_CFG_Type conf_pin;
@@ -215,83 +231,82 @@ void configADC(void)
 	conf_pin.Portnum = PINSEL_PORT_0;            //PUERTO 0
 	conf_pin.Pinnum = 23;                        //PIN 23
 	conf_pin.Pinmode = PINSEL_PINMODE_TRISTATE;    //
-    PINSEL_ConfigPin(&conf_pin);
+	PINSEL_ConfigPin(&conf_pin);
 
 	CLKPWR_SetPCLKDiv(CLKPWR_PCLKSEL_ADC, 3);
 	CLKPWR_ConfigPPWR(CLKPWR_PCONP_PCAD, ENABLE);
-    ///CONFIGURACION ADC///
+	///CONFIGURACION ADC///
 
-    ADC_Init(LPC_ADC, F_MUESTREO); //ENCIENDO ADC
-    ADC_ChannelCmd(LPC_ADC, ADC_CHANNEL_0,ENABLE); //POR CANAL 0
-    ADC_StartCmd(LPC_ADC, ADC_START_ON_MAT01);    //START CON MATCH, DEBE MUESTREAR CADA 1 SEG
-    ADC_EdgeStartConfig(LPC_ADC, ADC_START_ON_RISING);
+	ADC_Init(LPC_ADC, F_MUESTREO); //ENCIENDO ADC
+	ADC_ChannelCmd(LPC_ADC, ADC_CHANNEL_0,ENABLE); //POR CANAL 0
+	ADC_StartCmd(LPC_ADC, ADC_START_ON_MAT01);    //START CON MATCH, DEBE MUESTREAR CADA 1 SEG
+	ADC_EdgeStartConfig(LPC_ADC, ADC_START_ON_RISING);
 	ADC_BurstCmd(LPC_ADC, DISABLE);
 	ADC_IntConfig(LPC_ADC, ADC_ADGINTEN, SET);
 
 	ADC_GlobalGetStatus(LPC_ADC, 1);
-    NVIC_EnableIRQ(ADC_IRQn);
+	NVIC_EnableIRQ(ADC_IRQn);
 
-    return;
+	return;
 }
+
 void config_timer(void)
 {
 	CLKPWR_SetPCLKDiv(CLKPWR_PCLKSEL_TIMER0, CLKPWR_PCLKSEL_CCLK_DIV_4);
 	CLKPWR_ConfigPPWR(CLKPWR_PCONP_PCTIM0, ENABLE);
 
-    TIM_TIMERCFG_Type    struct_config;
-    TIM_MATCHCFG_Type    struct_match;
+	TIM_TIMERCFG_Type    struct_config;
+	TIM_MATCHCFG_Type    struct_match;
 
-    struct_config.PrescaleOption    =    TIM_PRESCALE_USVAL;
-    struct_config.PrescaleValue     =    100000;
+	struct_config.PrescaleOption    =    TIM_PRESCALE_USVAL;
+	struct_config.PrescaleValue     =    De_uS_mS(1);
 
-    struct_match.MatchChannel       =    1;
-    struct_match.IntOnMatch         =    DISABLE; //deshabilitamos las interrupciones por timer
-    struct_match.ResetOnMatch       =    ENABLE;//resetea el contador del timer cuando se produce un match
-    struct_match.StopOnMatch        =    DISABLE; //no detiene el contador del timer cuando se produce un match
-    struct_match.ExtMatchOutputType =    TIM_EXTMATCH_TOGGLE;
-    struct_match.MatchValue         =    5;
+	struct_match.MatchChannel       =    1;
+	struct_match.IntOnMatch         =    DISABLE; //deshabilitamos las interrupciones por timer
+	struct_match.ResetOnMatch       =    ENABLE;//resetea el contador del timer cuando se produce un match
+	struct_match.StopOnMatch        =    DISABLE; //no detiene el contador del timer cuando se produce un match
+	struct_match.ExtMatchOutputType =    TIM_EXTMATCH_TOGGLE;
+	struct_match.MatchValue         =    5;
 
-    TIM_Init(LPC_TIM0, TIM_TIMER_MODE, &struct_config); //se prende el timer0, se configura la division del clock del periferico, y se
-                                                        //configura el timer como modo temporizador y ademas se retesea el contador y se lo saca del reset
-    TIM_ConfigMatch(LPC_TIM0, &struct_match); //carga todas las configuraciones del struct_match en ls registros correspondientes
+	TIM_Init(LPC_TIM0, TIM_TIMER_MODE, &struct_config); //se prende el timer0, se configura la division del clock del periferico, y se
+	//configura el timer como modo temporizador y ademas se retesea el contador y se lo saca del reset
+	TIM_ConfigMatch(LPC_TIM0, &struct_match); //carga todas las configuraciones del struct_match en ls registros correspondientes
 
-    TIM_ResetCounter(LPC_TIM0);
-    TIM_Cmd(LPC_TIM0, DISABLE); //habilita el contador del timer y prescaler
+	TIM_ResetCounter(LPC_TIM0);
+	TIM_Cmd(LPC_TIM0, DISABLE); //habilita el contador del timer y prescaler
 
-    return;
+	return;
 }
+
 void config_timer_1(void)
 {
 	CLKPWR_ConfigPPWR(CLKPWR_PCONP_PCTIM1, ENABLE);
 
-    TIM_TIMERCFG_Type    struct_config;
-    TIM_MATCHCFG_Type    struct_match;
+	TIM_TIMERCFG_Type    struct_config;
+	TIM_MATCHCFG_Type    struct_match;
 
-    struct_config.PrescaleOption    =    TIM_PRESCALE_USVAL;
-    struct_config.PrescaleValue     =    1000000;
+	struct_config.PrescaleOption    =    TIM_PRESCALE_USVAL;
+	struct_config.PrescaleValue     =    De_uS_S(1);
 
-    struct_match.MatchChannel       =    0;
-    struct_match.IntOnMatch         =    ENABLE; //deshabilitamos las interrupciones por timer
-    struct_match.ResetOnMatch       =    ENABLE;//resetea el contador del timer cuando se produce un match
-    struct_match.StopOnMatch        =    DISABLE; //no detiene el contador del timer cuando se produce un match
-    struct_match.ExtMatchOutputType =    TIM_EXTMATCH_NOTHING;
-    struct_match.MatchValue         =    60;
+	struct_match.MatchChannel       =    0;
+	struct_match.IntOnMatch         =    ENABLE; //deshabilitamos las interrupciones por timer
+	struct_match.ResetOnMatch       =    ENABLE;//resetea el contador del timer cuando se produce un match
+	struct_match.StopOnMatch        =    DISABLE; //no detiene el contador del timer cuando se produce un match
+	struct_match.ExtMatchOutputType =    TIM_EXTMATCH_NOTHING;
+	struct_match.MatchValue         =    60;
 
-    TIM_Init(LPC_TIM1, TIM_TIMER_MODE, &struct_config); //se prende el timer1, se configura la division del clock del periferico, y se
-                                                        //configura el timer como modo temporizador y ademas se retesea el contador y se lo saca del reset
-    TIM_ConfigMatch(LPC_TIM1, &struct_match); //carga todas las configuraciones del struct_match en ls registros correspondientes
+	TIM_Init(LPC_TIM1, TIM_TIMER_MODE, &struct_config); //se prende el timer1, se configura la division del clock del periferico, y se
+	//configura el timer como modo temporizador y ademas se retesea el contador y se lo saca del reset
+	TIM_ConfigMatch(LPC_TIM1, &struct_match); //carga todas las configuraciones del struct_match en ls registros correspondientes
 
-    TIM_ResetCounter(LPC_TIM1);
-    TIM_Cmd(LPC_TIM1, DISABLE); //habilita el contador del timer y prescaler
+	TIM_ResetCounter(LPC_TIM1);
+	TIM_Cmd(LPC_TIM1, DISABLE); //habilita el contador del timer y prescaler
 
-    TIM_ClearIntPending(LPC_TIM1, TIM_MR0_INT);
-    TIM_ClearIntPending(LPC_TIM1, TIM_MR1_INT);
-    TIM_ClearIntPending(LPC_TIM1, TIM_MR2_INT);
-    TIM_ClearIntPending(LPC_TIM1, TIM_MR3_INT);
+	TIM_ClearIntPending(LPC_TIM1, TIM_MR0_INT);
 
-    NVIC_EnableIRQ(TIMER1_IRQn);
+	NVIC_EnableIRQ(TIMER1_IRQn);
 
-    return;
+	return;
 }
 
 void confExtInt(void)
@@ -303,19 +318,83 @@ void confExtInt(void)
 
 	return;
 }
-void EINT3_IRQHandler(void)
+
+void confUART(void)
 {
-	GPIO_SetValue(PINSEL_PORT_0, (BUZZER));
-	uint8_t tecla = get_TeclaMatrical();
-	for(uint64_t i=0; i<100000 ; i++){}
-	GPIO_ClearValue(PINSEL_PORT_0, (BUZZER));
+	PINSEL_CFG_Type PinCfg;
+	//configuraci�n pin de Tx y Rx
+	PinCfg.Funcnum = PINSEL_FUNC_1;
+	PinCfg.OpenDrain = PINSEL_PINMODE_NORMAL;
+	PinCfg.Pinmode = PINSEL_PINMODE_PULLUP;
+	PinCfg.Pinnum = PINSEL_PIN_2;
+	PinCfg.Portnum = PINSEL_PORT_0;
+	PINSEL_ConfigPin(&PinCfg);
+	PinCfg.Pinnum = PINSEL_PIN_3;
+	PINSEL_ConfigPin(&PinCfg);
 
-	(tecla >= 0 && tecla < 3) ? (modo = teclado_matricial[tecla]) : (modo = modo) ;
+	UART_CFG_Type UARTConfigStruct;
+	UART_FIFO_CFG_Type UARTFIFOConfigStruct;
+	//configuraci�n por defecto:
+	UART_ConfigStructInit(&UARTConfigStruct);
+	//inicializa perif�rico
+	UART_Init(LPC_UART0, &UARTConfigStruct);
+	UART_FIFOConfigStructInit(&UARTFIFOConfigStruct);
+	//Inicializa FIFO
+	UART_FIFOConfig(LPC_UART0, &UARTFIFOConfigStruct);
+	//Habilita transmisi�n
+	UART_TxCmd(LPC_UART0, ENABLE);
+}
+void confDMA(void)
+{
+	GPDMA_Channel_CFG_Type GPDMACfg;
+	/* GPDMA block section -------------------------------------------- */
+	/* Disable GPDMA interrupt */
+	NVIC_DisableIRQ(DMA_IRQn);
+	/* Initialize GPDMA controller */
+	GPDMA_Init();
+	// Setup GPDMA channel --------------------------------
+	// channel 0
+	GPDMACfg.ChannelNum = 0;
+	// Source memory
+	GPDMACfg.SrcMemAddr = (uint32_t)mensaje;
+	// Destination memory
+	GPDMACfg.DstMemAddr = 0;
+	// Transfer size
+	GPDMACfg.TransferSize = DMA_SIZE;
+	// Transfer width
+	GPDMACfg.TransferWidth = 0;
+	// Transfer type
+	GPDMACfg.TransferType = GPDMA_TRANSFERTYPE_M2P;
+	// Source connection - unused
+	GPDMACfg.SrcConn = 0;
+	// Destination connection - unused
+	GPDMACfg.DstConn = GPDMA_CONN_UART0_Tx;
+	// Linker List Item - unused
+	GPDMACfg.DMALLI = 0;
+	// Setup channel with given parameter
+	GPDMA_Setup(&GPDMACfg);
 
-	GPIO_ClearInt(PINSEL_PORT_2, IN_TECLADO);
+	// Enable GPDMA channel 0
+	GPDMA_ChannelCmd(0, ENABLE);
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*---------------------------------------------------Utilidades----------------------------------------------------------------------------------------*/
+void change_state(uint8_t state)
+{
+	if (state == LIBRE)
+	{
+		GPIO_SetValue(PINSEL_PORT_0, (LEDS_GREEN));
+		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_RED));
+	}
+	if (state == OCUPADO)
+	{
+		GPIO_SetValue(PINSEL_PORT_0, (LEDS_RED));
+		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_GREEN));
+	}
 
 	return;
 }
+
 uint16_t Convertir_Distancia(uint16_t adc_value)
 {
 	uint16_t velocidad = 0;
@@ -336,25 +415,46 @@ uint16_t Convertir_Distancia(uint16_t adc_value)
 	return velocidad;
 }
 
-void TIMER1_IRQHandler(void)
+uint_fast16_t potencia(uint8_t numero, uint_fast8_t potencia)
 {
-	tarifa += VALOR_FICHA;
-    TIM_ClearIntPending(LPC_TIM1, TIM_MR0_INT);
-
-    return;
+    uint16_t resultado = numero;
+    while (potencia > 1)
+    {
+        resultado = resultado * numero;
+        potencia--;
+    }
+    if(potencia==0){
+    	resultado=1;
+    }
+    return resultado;
 }
 
-void ADC_IRQHandler(void)
+void actualizar_mensaje(void)
 {
+	switch (modo) {
+		case LIBRE:
+			mensaje[1]=(uint8_t)'L';
+			break;
+		case OCUPADO:
+			mensaje[1]=(uint8_t)'O';
+				break;
+		case STOP:
+			mensaje[1]=(uint8_t)'S';
+			break;
+	}
+	uint16_t temp=tarifa;
+	uint8_t temp1=0;
+	for(uint8_t i=4;i>0;i--)
+	{
+		temp1=temp/(potencia(10, i-1));
 
-	ADC0Value = ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
+		mensaje[7-i]=temp1 + '0';
 
-	distancia += Convertir_Distancia(ADC0Value) * TIMEMUESTREO;
-
-	ADC_GlobalGetStatus(LPC_ADC, 1);
-
-	return;
+		temp-=temp1*(potencia(10, i-1));
+	}
+	confDMA();
 }
+
 uint8_t get_TeclaMatrical(void)
 {
 	uint8_t fila=0,	columna=0;
@@ -385,3 +485,43 @@ uint8_t get_TeclaMatrical(void)
 
 	return (fila*4 + columna);
 }
+/*---------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*---------------------------------------------------Handlers----------------------------------------------------------------------------------------*/
+
+void EINT3_IRQHandler(void)
+{
+	GPIO_SetValue(PINSEL_PORT_0, (BUZZER));
+	uint8_t tecla = get_TeclaMatrical();
+	for(uint64_t i=0; i<100000 ; i++){}
+	GPIO_ClearValue(PINSEL_PORT_0, (BUZZER));
+
+	(tecla >= 0 && tecla < 3) ? (modo = teclado_matricial[tecla]) : (modo = modo) ;
+
+	GPIO_ClearInt(PINSEL_PORT_2, IN_TECLADO);
+
+	return;
+}
+
+void TIMER1_IRQHandler(void)
+{
+	tarifa += VALOR_FICHA;
+	actualizar_mensaje();
+	TIM_ClearIntPending(LPC_TIM1, TIM_MR0_INT);
+
+	return;
+}
+
+void ADC_IRQHandler(void)
+{
+
+	ADC0Value = ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
+
+	distancia += Convertir_Distancia(ADC0Value) * TIMEMUESTREO;
+
+	ADC_GlobalGetStatus(LPC_ADC, 1);
+
+	return;
+}
+/*---------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+
