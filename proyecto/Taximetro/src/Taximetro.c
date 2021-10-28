@@ -43,7 +43,6 @@ uint8_t get_TeclaMatrical(void);
 #define LEDS_GREEN (1 << 5)
 #define BUZZER (1 << 6)
 
-
 #define TIMEMUESTREO 1
 
 #define EDGE_RISING 0
@@ -55,6 +54,9 @@ uint8_t get_TeclaMatrical(void);
 #define LIBRE 1
 #define OCUPADO 2
 #define STOP  3
+
+#define VALOR_FICHA 9
+#define DISTANCIA_FICHA 200
 
 uint8_t modo = LIBRE;
 uint16_t tarifa = 0;
@@ -121,9 +123,9 @@ void rutina_2(void)
 	tarifa = 0;
 	while (modo == OCUPADO)
 	{
-		if (distancia > 200)
+		if (distancia > DISTANCIA_FICHA)
 		{
-			tarifa += 9;
+			tarifa += VALOR_FICHA;
 			distancia = 0;
 		}
 	}
@@ -240,7 +242,7 @@ void config_timer(void)
     TIM_MATCHCFG_Type    struct_match;
 
     struct_config.PrescaleOption    =    TIM_PRESCALE_USVAL;
-    struct_config.PrescaleValue     =    1000;
+    struct_config.PrescaleValue     =    100000;
 
     struct_match.MatchChannel       =    1;
     struct_match.IntOnMatch         =    DISABLE; //deshabilitamos las interrupciones por timer
@@ -282,6 +284,13 @@ void config_timer_1(void)
     TIM_ResetCounter(LPC_TIM1);
     TIM_Cmd(LPC_TIM1, DISABLE); //habilita el contador del timer y prescaler
 
+    TIM_ClearIntPending(LPC_TIM1, TIM_MR0_INT);
+    TIM_ClearIntPending(LPC_TIM1, TIM_MR1_INT);
+    TIM_ClearIntPending(LPC_TIM1, TIM_MR2_INT);
+    TIM_ClearIntPending(LPC_TIM1, TIM_MR3_INT);
+
+    NVIC_EnableIRQ(TIMER1_IRQn);
+
     return;
 }
 
@@ -310,11 +319,11 @@ void EINT3_IRQHandler(void)
 uint16_t Convertir_Distancia(uint16_t adc_value)
 {
 	uint16_t velocidad = 0;
-	if (adc_value > 0)
+	velocidad = (adc_value * VELOCIDAD_MAX) / RESOLUCION;
+	if (velocidad > 0)
 	{
-		velocidad = (adc_value * VELOCIDAD_MAX) / RESOLUCION;
+		car_state = 1;
 		TIM_Cmd(LPC_TIM1, DISABLE);
-
 	}
 	else
 	{
@@ -326,6 +335,15 @@ uint16_t Convertir_Distancia(uint16_t adc_value)
 	}
 	return velocidad;
 }
+
+void TIMER1_IRQHandler(void)
+{
+	tarifa += VALOR_FICHA;
+    TIM_ClearIntPending(LPC_TIM1, TIM_MR0_INT);
+
+    return;
+}
+
 void ADC_IRQHandler(void)
 {
 
