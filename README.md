@@ -86,7 +86,7 @@ Se configura en el modo 3 para hacer parpadear el LED rojo.
 
 Para acceder al diagrama de flujo completo, haga click [aqui](https://raw.githubusercontent.com/Fran-cio/Tp_digital_3-Taximetro/a705a70d15fb5f503a1ddd39fb206571771cd181/Diagrama%20de%20Flujo/Diagrama%20de%20flujo.drawio.svg "Diagrama de flujo").
 
-#Integrantes
+# Integrantes
 * Francisco Ciordia Cantarella
 * Andres Orionte
 * Facundo Carrizo
