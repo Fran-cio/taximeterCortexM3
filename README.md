@@ -1,3 +1,11 @@
+# Trabajo Integrador de Digital 3
+Este trabajo corresponde al grupo 1 de la materia electronica digital 3. Consiste en un taximetro con modos implemtado con ADC, DMA, UART y teclado matricial.
+
+## Integrantes
+* Francisco Ciordia Cantarella
+* Andres Orionte
+* Facundo Carrizo
+
 # Requerimentos
 * La tarifa consiste en $ 90 al momento de iniciar el viaje.
 * $9 por cada 200 metros de recorrido o minuto de espera en caso de estar el vehículo detenido.
@@ -85,9 +93,4 @@ Se configura en el modo 3 para hacer parpadear el LED rojo.
 > * Posibilidad de apagar el led.
 
 Para acceder al diagrama de flujo completo, haga click [aqui](https://raw.githubusercontent.com/Fran-cio/Tp_digital_3-Taximetro/a705a70d15fb5f503a1ddd39fb206571771cd181/Diagrama%20de%20Flujo/Diagrama%20de%20flujo.drawio.svg "Diagrama de flujo").
-
-# Integrantes
-* Francisco Ciordia Cantarella
-* Andres Orionte
-* Facundo Carrizo
 
