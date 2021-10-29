@@ -38,8 +38,8 @@ void actualizar_mensaje(void);
 uint8_t obtener_teclaMatricial(void);
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*---------------------------------------------------DEFINES----------------------------------------------------------------------------------------*/
-#define De_uS_mS(num) (num*100000)
-#define De_uS_S(num) (num*1000000)
+#define De_mS_uS(num) (num*100000)
+#define De_S_uS(num) (num*1000000)
 
 #define OUTPUT 1
 #define INPUT 0
@@ -286,7 +286,7 @@ void config_timer(void)
 	 */
 
 	struct_config.PrescaleOption    =    TIM_PRESCALE_USVAL;
-	struct_config.PrescaleValue     =    De_uS_mS(1);
+	struct_config.PrescaleValue     =    De_mS_uS(1);
 
 	struct_match.MatchChannel       =    1;
 	struct_match.IntOnMatch         =    DISABLE; //deshabilitamos las interrupciones por timer
@@ -321,7 +321,7 @@ void config_timer_1(void)
 	 */
 
 	struct_config.PrescaleOption    =    TIM_PRESCALE_USVAL;
-	struct_config.PrescaleValue     =    De_uS_S(1);
+	struct_config.PrescaleValue     =    De_S_uS(1);
 
 	struct_match.MatchChannel       =    0;
 	struct_match.IntOnMatch         =    ENABLE; //habilitamos las interrupciones por timer
