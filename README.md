@@ -1,5 +1,6 @@
 # Trabajo Integrador de Digital 3
 Este trabajo corresponde al grupo 1 de la materia electronica digital 3. Consiste en un taximetro con modos implemtado con ADC, DMA, UART y teclado matricial.
+Este se implemeta en C con el microcontrolador CORTEX M3 LPC1769.
 
 ## Integrantes
 * Francisco Ciordia Cantarella
@@ -55,7 +56,12 @@ Se puede agregar 5 fichas con la tecla D.
 
 **Entradas:** 	2.0,2.1,2.2,2.3 (*Teclado matricial*) (Todas pull-down)
 
-### PINSEL
+### PINSEL# Integrantes
+* Francisco Ciordia Cantarella
+* Andres Orionte
+* Facundo Carrizo
+
+
 **Func 0:** 	2.0,2.1,2.2,2.3,2.4,2.5,2.6,2.7 (*Teclado matricial*); 0.4,0.5 (*Led de O/L*); 0.6 (*Buzzer*)
 
 **Func 1:**	0.23 (*ADC 0.0*); 0.2,0.3 (*UART 0.0*)
