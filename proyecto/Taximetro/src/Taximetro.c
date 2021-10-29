@@ -21,7 +21,7 @@ Description : Un taximetro hecho para el integrador de Digitales 3
 /*---------------------------------------------------Configs----------------------------------------------------------------------------------------*/
 void confGPIO(void); // Prototipo de la funcion de conf. de puertos
 void configADC(void);
-void config_timer(void);
+void config_timer_0(void);
 void confExtInt(void); //Prototipo de la funcion de conf. de interrupciones externas
 void config_timer_1(void);
 void confUART(void);
@@ -104,7 +104,7 @@ int main(void)
 	confDMA();
 	configADC();
 
-	config_timer();
+	config_timer_0();
 	config_timer_1();
 	bucle();
 
@@ -150,7 +150,7 @@ void rutina_1(void)
 	actualizar_mensaje();
 	while (modo == LIBRE){}
 
-	tarifa=BAJADA_DE_BANDERA; //
+	tarifa=BAJADA_DE_BANDERA; //Los valores arrancan en este punto
 	return;
 }
 /* 
@@ -302,7 +302,7 @@ void configADC(void)
 	return;
 }
 
-void config_timer(void)
+void config_timer_0(void)
 {
 	TIM_TIMERCFG_Type    struct_config;
 	TIM_MATCHCFG_Type    struct_match;
@@ -609,11 +609,14 @@ void EINT3_IRQHandler(void)
 	tecla=teclado_matricial[tecla]; //Del indice se obtiene el valor en el teclado
 
 	//Si es modo valido, lo cambia, sino, lo deja pasar
-	(tecla > 0 && tecla <= 3) ? (modo = tecla) : (modo = modo) ;
+	if(tecla > 0 && tecla <= 3)
+	{
+		modo = tecla;
+	} 
 	/*
 	 * Un modo luz apagada en el boton 4
 	 */
-	if(tecla==4)
+	else if(tecla==4)
 	{
 		if(LED_ON_OFF)
 		{
@@ -624,6 +627,12 @@ void EINT3_IRQHandler(void)
 			LED_ON_OFF=1;
 		}
 		actualizar_estado();
+	}
+
+	//Se puede 5 Fichas por exceso de peso o razon que sea
+	else if(tecla=0xD)
+	{
+		tarifa+=5*VALOR_FICHA;
 	}
 
 	GPIO_ClearInt(PINSEL_PORT_2, ENTRADA_TECLADO);
@@ -640,11 +649,9 @@ void TIMER1_IRQHandler(void)
 
 	return;
 }
-
 /* 
  * Simplemente obtengo el dato y lo convierto
  */
-
 void ADC_IRQHandler(void)
 {
 
@@ -663,14 +670,14 @@ void SysTick_Handler(void) {
 	if(LED_ON_OFF){
 		if(parpadeo<5)
 		{
-			parpadeo++;
 			GPIO_ClearValue(PINSEL_PORT_0, (LEDS_ROJO));
 		}
 		else
 		{
-			parpadeo++;
 			GPIO_SetValue(PINSEL_PORT_0, (LEDS_ROJO));
 		}
+
+		parpadeo++;
 
 		if(parpadeo==10)
 			parpadeo=0;
