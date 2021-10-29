@@ -14,13 +14,16 @@ Description : Un taximetro hecho para el integrador de Digitales 3
 #include "lpc17xx_clkpwr.h"
 #include "lpc17xx_gpdma.h"
 #include "lpc17xx_uart.h"
+#include "lpc17xx_exti.h"
+#include "lpc17xx_systick.h"
+
 
 /*---------------------------------------------------Configs----------------------------------------------------------------------------------------*/
 void confGPIO(void); // Prototipo de la funcion de conf. de puertos
 void configADC(void);
 void config_timer(void);
 void confExtInt(void); //Prototipo de la funcion de conf. de interrupciones externas
-void change_state(uint8_t state);
+void change_state(void);
 void config_timer_1(void);
 void confUART(void);
 void confDMA(void);
@@ -50,7 +53,7 @@ uint8_t get_TeclaMatrical(void);
 
 #define TIMEMUESTREO 1
 #define F_MUESTREO 200000
-
+#define CLKPWR_PCLKSEL_CCLK_DIV_8 3
 
 #define EDGE_RISING 0
 #define LENGTH 16
@@ -68,7 +71,10 @@ uint8_t get_TeclaMatrical(void);
 #define DISTANCIA_FICHA 200
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*--------------------------------------------------------Variables Globales-------------------------------------------------------------------------*/
+GPDMA_LLI_Type DMA_LLI_Struct;
 
+uint8_t static anti_rebote=0;
+uint8_t static LED_ON_OFF=1;
 uint8_t static modo = LIBRE;
 uint16_t static tarifa = 0;
 uint16_t static distancia = 0;
@@ -80,7 +86,7 @@ uint8_t const teclado_matricial[LENGTH] = {	1,2,3,0xA, \
 		7,8,9,0xC, \
 		0XE,0,0XE,0XD
 };
-uint8_t mensaje[] = {"\rM\t0000"};
+uint8_t mensaje[10] = {"\rM   $0000"};
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*--------------------------------------------------------Programa-------------------------------------------------------------------------*/
@@ -123,7 +129,7 @@ void bucle(void)
 /* Pasa del estado ocupado o en stop al estado libre */
 void rutina_1(void)
 {
-	change_state(LIBRE);
+	change_state();
 	TIM_Cmd(LPC_TIM0, DISABLE);
 	TIM_Cmd(LPC_TIM1, DISABLE);
 
@@ -140,7 +146,7 @@ void rutina_1(void)
 /* Pasa del estado ocupado o en stop al estado libre */
 void rutina_2(void)
 {
-	change_state(OCUPADO);
+	change_state();
 	TIM_ResetCounter(LPC_TIM0);
 	TIM_Cmd(LPC_TIM0, ENABLE);
 
@@ -233,8 +239,7 @@ void configADC(void)
 	conf_pin.Pinmode = PINSEL_PINMODE_TRISTATE;    //
 	PINSEL_ConfigPin(&conf_pin);
 
-	CLKPWR_SetPCLKDiv(CLKPWR_PCLKSEL_ADC, 3);
-	CLKPWR_ConfigPPWR(CLKPWR_PCONP_PCAD, ENABLE);
+	CLKPWR_SetPCLKDiv(CLKPWR_PCLKSEL_ADC, CLKPWR_PCLKSEL_CCLK_DIV_8);
 	///CONFIGURACION ADC///
 
 	ADC_Init(LPC_ADC, F_MUESTREO); //ENCIENDO ADC
@@ -252,9 +257,6 @@ void configADC(void)
 
 void config_timer(void)
 {
-	CLKPWR_SetPCLKDiv(CLKPWR_PCLKSEL_TIMER0, CLKPWR_PCLKSEL_CCLK_DIV_4);
-	CLKPWR_ConfigPPWR(CLKPWR_PCONP_PCTIM0, ENABLE);
-
 	TIM_TIMERCFG_Type    struct_config;
 	TIM_MATCHCFG_Type    struct_match;
 
@@ -280,8 +282,6 @@ void config_timer(void)
 
 void config_timer_1(void)
 {
-	CLKPWR_ConfigPPWR(CLKPWR_PCONP_PCTIM1, ENABLE);
-
 	TIM_TIMERCFG_Type    struct_config;
 	TIM_MATCHCFG_Type    struct_match;
 
@@ -346,13 +346,22 @@ void confUART(void)
 }
 void confDMA(void)
 {
-	GPDMA_Channel_CFG_Type GPDMACfg;
+	//Prepare DMA link list item structure
+	DMA_LLI_Struct.SrcAddr= (uint32_t)mensaje;
+	DMA_LLI_Struct.DstAddr= (uint32_t)&LPC_UART0->THR;
+	DMA_LLI_Struct.NextLLI= (uint32_t)&DMA_LLI_Struct;
+	DMA_LLI_Struct.Control= sizeof(mensaje)
+				| 	(2<<12)
+				| 	(1<<26) //source increment
+				;
+
 	/* GPDMA block section -------------------------------------------- */
 	/* Disable GPDMA interrupt */
 	NVIC_DisableIRQ(DMA_IRQn);
 	/* Initialize GPDMA controller */
 	GPDMA_Init();
 	// Setup GPDMA channel --------------------------------
+	GPDMA_Channel_CFG_Type GPDMACfg;
 	// channel 0
 	GPDMACfg.ChannelNum = 0;
 	// Source memory
@@ -360,7 +369,7 @@ void confDMA(void)
 	// Destination memory
 	GPDMACfg.DstMemAddr = 0;
 	// Transfer size
-	GPDMACfg.TransferSize = DMA_SIZE;
+	GPDMACfg.TransferSize = sizeof(mensaje);
 	// Transfer width
 	GPDMACfg.TransferWidth = 0;
 	// Transfer type
@@ -370,7 +379,7 @@ void confDMA(void)
 	// Destination connection - unused
 	GPDMACfg.DstConn = GPDMA_CONN_UART0_Tx;
 	// Linker List Item - unused
-	GPDMACfg.DMALLI = 0;
+	GPDMACfg.DMALLI = (uint32_t)&DMA_LLI_Struct;
 	// Setup channel with given parameter
 	GPDMA_Setup(&GPDMACfg);
 
@@ -379,14 +388,14 @@ void confDMA(void)
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*---------------------------------------------------Utilidades----------------------------------------------------------------------------------------*/
-void change_state(uint8_t state)
+void change_state(void)
 {
-	if (state == LIBRE)
+	if (modo == LIBRE)
 	{
 		GPIO_SetValue(PINSEL_PORT_0, (LEDS_GREEN));
 		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_RED));
 	}
-	if (state == OCUPADO)
+	if (modo == OCUPADO)
 	{
 		GPIO_SetValue(PINSEL_PORT_0, (LEDS_RED));
 		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_GREEN));
@@ -448,13 +457,11 @@ void actualizar_mensaje(void)
 	{
 		temp1=temp/(potencia(10, i-1));
 
-		mensaje[7-i]=temp1 + '0';
+		mensaje[sizeof(mensaje)-i]=temp1 + '0';
 
 		temp-=temp1*(potencia(10, i-1));
 	}
-	confDMA();
 }
-
 uint8_t get_TeclaMatrical(void)
 {
 	uint8_t fila=0,	columna=0;
@@ -492,13 +499,28 @@ void EINT3_IRQHandler(void)
 {
 	GPIO_SetValue(PINSEL_PORT_0, (BUZZER));
 	uint8_t tecla = get_TeclaMatrical();
-	for(uint64_t i=0; i<100000 ; i++){}
+	for(uint64_t i=0; i<500000 ; i++){}
 	GPIO_ClearValue(PINSEL_PORT_0, (BUZZER));
+	for(uint64_t i=0; i<500000 ; i++){}
 
-	(tecla >= 0 && tecla < 3) ? (modo = teclado_matricial[tecla]) : (modo = modo) ;
+	tecla=teclado_matricial[tecla];
+	(tecla > 0 && tecla <= 3) ? (modo = tecla) : (modo = modo) ;
+	FIO_ByteSetMask(0, 0, (11<4), DISABLE);
+	if(tecla==4)
+	{
+		if(LED_ON_OFF)
+		{
+			FIO_ByteClearValue(0, 0, (0b11<<4));
+			LED_ON_OFF=0;
+		}
+		else
+		{
+			change_state();
+			LED_ON_OFF=1;
+		}
+	}
 
 	GPIO_ClearInt(PINSEL_PORT_2, IN_TECLADO);
-
 	return;
 }
 
