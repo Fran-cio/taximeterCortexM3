@@ -68,11 +68,14 @@ uint8_t obtener_teclaMatricial(void);
 
 #define DMA_SIZE 7
 
+#define BAJADA_DE_BANDERA 90
 #define VALOR_FICHA 9
 #define DISTANCIA_FICHA 200
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*--------------------------------------------------------Variables Globales-------------------------------------------------------------------------*/
 GPDMA_LLI_Type DMA_LLI_Struct;
+
+uint8_t static parpadeo=1;
 
 uint8_t static LED_ON_OFF=1;
 uint8_t static modo = LIBRE;
@@ -136,7 +139,8 @@ void bucle(void)
  */
 void rutina_1(void)
 {
-	actualizar_estado(); 
+	actualizar_estado();
+
 	TIM_Cmd(LPC_TIM0, DISABLE);
 	TIM_Cmd(LPC_TIM1, DISABLE);
 
@@ -144,9 +148,9 @@ void rutina_1(void)
 	distancia=0;
 
 	actualizar_mensaje();
-	while (modo == LIBRE)
-	{
-	}
+	while (modo == LIBRE){}
+
+	tarifa=BAJADA_DE_BANDERA; //
 	return;
 }
 /* 
@@ -156,6 +160,7 @@ void rutina_1(void)
 void rutina_2(void)
 {
 	actualizar_estado();
+
 	TIM_ResetCounter(LPC_TIM0);
 	TIM_Cmd(LPC_TIM0, ENABLE);
 
@@ -179,14 +184,23 @@ void rutina_2(void)
 
 void rutina_3(void)
 {
+	actualizar_estado();
+
 	TIM_Cmd(LPC_TIM0, DISABLE);
 	TIM_Cmd(LPC_TIM1, DISABLE);
 
 	actualizar_mensaje();
-	while (modo == PARADO)
-	{
 
-	}
+//Systick para hacer parpadear el led de PARADO
+
+	SYSTICK_Cmd(1);
+	SYSTICK_IntCmd(1);
+	SYSTICK_InternalInit(150);
+
+	while (modo == PARADO){}
+
+	SYSTICK_Cmd(DISABLE);
+	SYSTICK_IntCmd(DISABLE);
 	return;
 }
 
@@ -272,7 +286,19 @@ void configADC(void)
 
 	ADC_GlobalGetStatus(LPC_ADC, 1); //Bajo la bandera
 	NVIC_EnableIRQ(ADC_IRQn);
-
+	void SysTick_Handler(void) {
+		if(parpadeo){
+			parpadeo=0;
+			GPIO_ClearValue(PINSEL_PORT_0, (LEDS_ROJO));
+		}
+		else
+		{
+			parpadeo=1;
+			GPIO_SetValue(PINSEL_PORT_0, (LEDS_ROJO));
+		}
+		SYSTICK_ClearCounterFlag();
+		return;
+	}
 	return;
 }
 
@@ -430,15 +456,22 @@ void confDMA(void)
  */
 void actualizar_estado(void)
 {
-	if (modo == LIBRE)
+	if(LED_ON_OFF)
 	{
-		GPIO_SetValue(PINSEL_PORT_0, (LEDS_VERDE));
-		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_ROJO));
+		if (modo == LIBRE)
+		{
+			GPIO_SetValue(PINSEL_PORT_0, (LEDS_VERDE));
+			GPIO_ClearValue(PINSEL_PORT_0, (LEDS_ROJO));
+		}
+		else if (modo == OCUPADO || modo ==  PARADO)
+		{
+			GPIO_SetValue(PINSEL_PORT_0, (LEDS_ROJO));
+			GPIO_ClearValue(PINSEL_PORT_0, (LEDS_VERDE));
+		}
 	}
-	if (modo == OCUPADO)
+	else
 	{
-		GPIO_SetValue(PINSEL_PORT_0, (LEDS_ROJO));
-		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_VERDE));
+		FIO_ByteClearValue(0, 0, (0b11<<4));
 	}
 	return;
 }
@@ -584,14 +617,13 @@ void EINT3_IRQHandler(void)
 	{
 		if(LED_ON_OFF)
 		{
-			FIO_ByteClearValue(0, 0, (0b11<<4));
 			LED_ON_OFF=0;
 		}
 		else
 		{
-			actualizar_estado();
 			LED_ON_OFF=1;
 		}
+		actualizar_estado();
 	}
 
 	GPIO_ClearInt(PINSEL_PORT_2, ENTRADA_TECLADO);
@@ -622,6 +654,29 @@ void ADC_IRQHandler(void)
 
 	ADC_GlobalGetStatus(LPC_ADC, 1);
 
+	return;
+}
+/*
+ * Si esta en modo PARADO, hace parpaderar el led
+ */
+void SysTick_Handler(void) {
+	if(LED_ON_OFF){
+		if(parpadeo<5)
+		{
+			parpadeo++;
+			GPIO_ClearValue(PINSEL_PORT_0, (LEDS_ROJO));
+		}
+		else
+		{
+			parpadeo++;
+			GPIO_SetValue(PINSEL_PORT_0, (LEDS_ROJO));
+		}
+
+		if(parpadeo==10)
+			parpadeo=0;
+	}
+
+	SYSTICK_ClearCounterFlag();
 	return;
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
