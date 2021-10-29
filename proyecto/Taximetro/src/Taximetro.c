@@ -23,7 +23,6 @@ void confGPIO(void); // Prototipo de la funcion de conf. de puertos
 void configADC(void);
 void config_timer(void);
 void confExtInt(void); //Prototipo de la funcion de conf. de interrupciones externas
-void change_state(void);
 void config_timer_1(void);
 void confUART(void);
 void confDMA(void);
@@ -34,8 +33,9 @@ void rutina_3(void);
 void bucle(void);
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*---------------------------------------------------Utilidades----------------------------------------------------------------------------------------*/
+void actualizar_estado(void);
 void actualizar_mensaje(void);
-uint8_t get_TeclaMatrical(void);
+uint8_t obtener_teclaMatricial(void);
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*---------------------------------------------------DEFINES----------------------------------------------------------------------------------------*/
 #define De_uS_mS(num) (num*100000)
@@ -43,27 +43,28 @@ uint8_t get_TeclaMatrical(void);
 
 #define OUTPUT 1
 #define INPUT 0
-#define IN_TECLADO 0XF
-#define OUT_TECLADO (0XF << 4)
+#define ENTRADA_TECLADO 0XF
+#define SALIDA_TECLADO (0XF << 4)
 
-#define CHANNEL_0 0
-#define LEDS_RED (1 << 4)
-#define LEDS_GREEN (1 << 5)
+#define CANAL_0 0
+#define LEDS_ROJO (1 << 4)
+#define LEDS_VERDE (1 << 5)
 #define BUZZER (1 << 6)
 
 #define TIMEMUESTREO 1
-#define F_MUESTREO 200000
+#define F_MUESTREO 192307
 #define CLKPWR_PCLKSEL_CCLK_DIV_8 3
 
 #define EDGE_RISING 0
-#define LENGTH 16
+#define LONGITUD 16
+#define LONGITUD_MENSAJE 10
 
 #define VELOCIDAD_MAX 40
 #define RESOLUCION 4096
 /* Estados del taximetro*/
 #define LIBRE 1
 #define OCUPADO 2
-#define STOP  3
+#define PARADO  3
 
 #define DMA_SIZE 7
 
@@ -73,7 +74,6 @@ uint8_t get_TeclaMatrical(void);
 /*--------------------------------------------------------Variables Globales-------------------------------------------------------------------------*/
 GPDMA_LLI_Type DMA_LLI_Struct;
 
-uint8_t static anti_rebote=0;
 uint8_t static LED_ON_OFF=1;
 uint8_t static modo = LIBRE;
 uint16_t static tarifa = 0;
@@ -81,29 +81,35 @@ uint16_t static distancia = 0;
 uint8_t static car_state = 0;
 volatile uint16_t ADC0Value = 0;
 
-uint8_t const teclado_matricial[LENGTH] = {	1,2,3,0xA, \
+uint8_t const teclado_matricial[LONGITUD] = {	1,2,3,0xA, \
 	4,5,6,0XB, \
 		7,8,9,0xC, \
 		0XE,0,0XE,0XD
 };
-uint8_t mensaje[10] = {"\rM   $0000"};
+uint8_t mensaje[LONGITUD_MENSAJE] = {"\rM   $0000"};
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*--------------------------------------------------------Programa-------------------------------------------------------------------------*/
 int main(void)
 {
+	//El nombre de la funcion es descriptivo para sus funcionalidades
 	confGPIO();
+
+	//Perifericos pedidos
 	confExtInt();
-	configADC();
-	config_timer();
-	config_timer_1();
 	confUART();
 	confDMA();
+	configADC();
 
+	config_timer();
+	config_timer_1();
 	bucle();
 
 	return 0;
 }
+/*
+ * A medida que el modo cambia por teclado, cambia el estado del taximetro
+ */
 void bucle(void)
 {
 	while(1)
@@ -111,25 +117,26 @@ void bucle(void)
 		switch (modo)
 		{
 			case LIBRE:
-				rutina_1(); //cambiar nombre de estas funciones
+				rutina_1(); //Rutina de modo 1
 				break;
 
 			case OCUPADO:
-				rutina_2();
+				rutina_2(); //Rutina de modo 2
 				break;
 
-			case STOP:
-				rutina_3();
+			case PARADO:
+				rutina_3(); //Rutina de modo 3
 				break;
 		}
 
 	}
 }
-
-/* Pasa del estado ocupado o en stop al estado libre */
+/*
+ * Cambio la luz, apago los timers y reinicio valores
+ */
 void rutina_1(void)
 {
-	change_state();
+	actualizar_estado(); 
 	TIM_Cmd(LPC_TIM0, DISABLE);
 	TIM_Cmd(LPC_TIM1, DISABLE);
 
@@ -142,11 +149,13 @@ void rutina_1(void)
 	}
 	return;
 }
-
-/* Pasa del estado ocupado o en stop al estado libre */
+/* 
+ * Cambio las luces, prendo los timers y arranco a verificar cuando aumento la tarifa
+ * mientras actualizo el mensaje enviado
+ */
 void rutina_2(void)
 {
-	change_state();
+	actualizar_estado();
 	TIM_ResetCounter(LPC_TIM0);
 	TIM_Cmd(LPC_TIM0, ENABLE);
 
@@ -163,13 +172,18 @@ void rutina_2(void)
 	return;
 }
 
+/*
+ * Apaga los timers pero no reinicia los valores para poder reanudarlos o 
+ * terminalos
+ */
+
 void rutina_3(void)
 {
 	TIM_Cmd(LPC_TIM0, DISABLE);
 	TIM_Cmd(LPC_TIM1, DISABLE);
 
 	actualizar_mensaje();
-	while (modo == STOP)
+	while (modo == PARADO)
 	{
 
 	}
@@ -196,7 +210,7 @@ void confGPIO(void)
 		PinCfg.Pinnum = i;
 		PINSEL_ConfigPin(&PinCfg); //configura los pines p2.0 a p2.3 como gpio, con pull-down y modo normal
 	}
-	GPIO_SetDir(PINSEL_PORT_2, IN_TECLADO, INPUT); // configura los pines p2.0 a p2.3 como entradas
+	GPIO_SetDir(PINSEL_PORT_2, ENTRADA_TECLADO, INPUT); // configura los pines p2.0 a p2.3 como entradas
 
 	/* salidas */
 
@@ -207,7 +221,7 @@ void confGPIO(void)
 		PINSEL_ConfigPin(&PinCfg); //configura los pines p2.4 a p2.7 como gpio, con pull-up y modo normal
 	}
 
-	GPIO_SetDir(PINSEL_PORT_2, OUT_TECLADO, OUTPUT); // configura los pines p2.4 a p2.7 como salids
+	GPIO_SetDir(PINSEL_PORT_2, SALIDA_TECLADO, OUTPUT); // configura los pines p2.4 a p2.7 como salids
 
 	/* LEDS */
 	PinCfg.Pinmode = PINSEL_PINMODE_PULLUP;
@@ -222,8 +236,8 @@ void confGPIO(void)
 	PinCfg.Pinnum = 6;
 	PINSEL_ConfigPin(&PinCfg);
 
-	GPIO_SetDir(PINSEL_PORT_0, (LEDS_RED | LEDS_GREEN | BUZZER), OUTPUT);
-	FIO_ByteSetValue(2, 0, OUT_TECLADO);
+	GPIO_SetDir(PINSEL_PORT_0, (LEDS_ROJO | LEDS_VERDE | BUZZER), OUTPUT);
+	FIO_ByteSetValue(2, 0, SALIDA_TECLADO);
 
 	GPIO_ClearValue(PINSEL_PORT_0, (BUZZER));
 
@@ -236,20 +250,27 @@ void configADC(void)
 	conf_pin.Funcnum = PINSEL_FUNC_1;            //PIN EN MODO AD0.0
 	conf_pin.Portnum = PINSEL_PORT_0;            //PUERTO 0
 	conf_pin.Pinnum = 23;                        //PIN 23
-	conf_pin.Pinmode = PINSEL_PINMODE_TRISTATE;    //
+	conf_pin.Pinmode = PINSEL_PINMODE_TRISTATE;    //Ni pull-up ni down
 	PINSEL_ConfigPin(&conf_pin);
 
 	CLKPWR_SetPCLKDiv(CLKPWR_PCLKSEL_ADC, CLKPWR_PCLKSEL_CCLK_DIV_8);
 	///CONFIGURACION ADC///
+	/*
+	 * Nuestro CCLK es de 100MHz y configuramos el divisor de periferico a 8
+	 * CCLK/divP = 100MHz/8 = 12,5MHz 
+	 * A todo esto, al utilizar el modo controlado necesito 65 ciclos de reloj
+	 * para establecer la muestra.
+	 * 12,5MHz/65 = 195312 Hz, siendo la frecuencia de trabajo maxima configurable
+	 */
 
 	ADC_Init(LPC_ADC, F_MUESTREO); //ENCIENDO ADC
 	ADC_ChannelCmd(LPC_ADC, ADC_CHANNEL_0,ENABLE); //POR CANAL 0
 	ADC_StartCmd(LPC_ADC, ADC_START_ON_MAT01);    //START CON MATCH, DEBE MUESTREAR CADA 1 SEG
-	ADC_EdgeStartConfig(LPC_ADC, ADC_START_ON_RISING);
-	ADC_BurstCmd(LPC_ADC, DISABLE);
-	ADC_IntConfig(LPC_ADC, ADC_ADGINTEN, SET);
+	ADC_EdgeStartConfig(LPC_ADC, ADC_START_ON_RISING); //Arranca ṕr Mat0.1 en alto
+	ADC_BurstCmd(LPC_ADC, DISABLE);//Modo controlado
+	ADC_IntConfig(LPC_ADC, ADC_ADGINTEN, SET);//Activo las interrupciones
 
-	ADC_GlobalGetStatus(LPC_ADC, 1);
+	ADC_GlobalGetStatus(LPC_ADC, 1); //Bajo la bandera
 	NVIC_EnableIRQ(ADC_IRQn);
 
 	return;
@@ -260,6 +281,10 @@ void config_timer(void)
 	TIM_TIMERCFG_Type    struct_config;
 	TIM_MATCHCFG_Type    struct_match;
 
+	/*
+	 * configuro el timer para que aumente cada 1 ms
+	 */
+
 	struct_config.PrescaleOption    =    TIM_PRESCALE_USVAL;
 	struct_config.PrescaleValue     =    De_uS_mS(1);
 
@@ -268,6 +293,12 @@ void config_timer(void)
 	struct_match.ResetOnMatch       =    ENABLE;//resetea el contador del timer cuando se produce un match
 	struct_match.StopOnMatch        =    DISABLE; //no detiene el contador del timer cuando se produce un match
 	struct_match.ExtMatchOutputType =    TIM_EXTMATCH_TOGGLE;
+
+	/*
+	 * Si yo necesito muestrear cada 1 hz, la frecuencia de toogle debe ser del
+	 * doble, en decir la mitad de tiempo, 5mS
+	 */
+
 	struct_match.MatchValue         =    5;
 
 	TIM_Init(LPC_TIM0, TIM_TIMER_MODE, &struct_config); //se prende el timer0, se configura la division del clock del periferico, y se
@@ -285,15 +316,19 @@ void config_timer_1(void)
 	TIM_TIMERCFG_Type    struct_config;
 	TIM_MATCHCFG_Type    struct_match;
 
+	/*
+	 * configuro el timer para que aumente cada 1 s
+	 */
+
 	struct_config.PrescaleOption    =    TIM_PRESCALE_USVAL;
 	struct_config.PrescaleValue     =    De_uS_S(1);
 
 	struct_match.MatchChannel       =    0;
-	struct_match.IntOnMatch         =    ENABLE; //deshabilitamos las interrupciones por timer
+	struct_match.IntOnMatch         =    ENABLE; //habilitamos las interrupciones por timer
 	struct_match.ResetOnMatch       =    ENABLE;//resetea el contador del timer cuando se produce un match
 	struct_match.StopOnMatch        =    DISABLE; //no detiene el contador del timer cuando se produce un match
 	struct_match.ExtMatchOutputType =    TIM_EXTMATCH_NOTHING;
-	struct_match.MatchValue         =    60;
+	struct_match.MatchValue         =    60; //Match cada 1 minuto
 
 	TIM_Init(LPC_TIM1, TIM_TIMER_MODE, &struct_config); //se prende el timer1, se configura la division del clock del periferico, y se
 	//configura el timer como modo temporizador y ademas se retesea el contador y se lo saca del reset
@@ -311,8 +346,11 @@ void config_timer_1(void)
 
 void confExtInt(void)
 {
-	GPIO_IntCmd(PINSEL_PORT_2, IN_TECLADO, EDGE_RISING);
-	GPIO_ClearInt(PINSEL_PORT_2, IN_TECLADO);
+	/*
+	 * Configuro para que los pines de entrada del teclado interrumpan
+	 */
+	GPIO_IntCmd(PINSEL_PORT_2, ENTRADA_TECLADO, EDGE_RISING);
+	GPIO_ClearInt(PINSEL_PORT_2, ENTRADA_TECLADO);
 
 	NVIC_EnableIRQ(EINT3_IRQn);
 
@@ -346,64 +384,70 @@ void confUART(void)
 }
 void confDMA(void)
 {
-	//Prepare DMA link list item structure
+	//Preparo la LLI del DMA
 	DMA_LLI_Struct.SrcAddr= (uint32_t)mensaje;
 	DMA_LLI_Struct.DstAddr= (uint32_t)&LPC_UART0->THR;
 	DMA_LLI_Struct.NextLLI= (uint32_t)&DMA_LLI_Struct;
 	DMA_LLI_Struct.Control= sizeof(mensaje)
-				| 	(2<<12)
-				| 	(1<<26) //source increment
-				;
+		| 	(2<<12)
+		| 	(1<<26) //source increment
+		;
 
-	/* GPDMA block section -------------------------------------------- */
-	/* Disable GPDMA interrupt */
+	// Desabilito la interrupcion de GDMA
 	NVIC_DisableIRQ(DMA_IRQn);
-	/* Initialize GPDMA controller */
+	// Inicializo controlador de GPDMA
 	GPDMA_Init();
-	// Setup GPDMA channel --------------------------------
+	//Configuracion del canal 0
 	GPDMA_Channel_CFG_Type GPDMACfg;
-	// channel 0
-	GPDMACfg.ChannelNum = 0;
-	// Source memory
+	// CANAL 0
+	GPDMACfg.ChannelNum = CANAL_0;
+	// Fuente de memoria
 	GPDMACfg.SrcMemAddr = (uint32_t)mensaje;
-	// Destination memory
+	// Destino de memoria, al ser periferico es 0
 	GPDMACfg.DstMemAddr = 0;
-	// Transfer size
+	// tamaño de trasnferencia
 	GPDMACfg.TransferSize = sizeof(mensaje);
-	// Transfer width
+	// Ancho de trasnferencia
 	GPDMACfg.TransferWidth = 0;
-	// Transfer type
+	// Tipo de memoria
 	GPDMACfg.TransferType = GPDMA_TRANSFERTYPE_M2P;
-	// Source connection - unused
+	// Coneccion de la Fuente, sin usar al ser periferico
 	GPDMACfg.SrcConn = 0;
-	// Destination connection - unused
+	// Coneccion de destino
 	GPDMACfg.DstConn = GPDMA_CONN_UART0_Tx;
-	// Linker List Item - unused
+	// LLI
 	GPDMACfg.DMALLI = (uint32_t)&DMA_LLI_Struct;
-	// Setup channel with given parameter
+
 	GPDMA_Setup(&GPDMACfg);
 
-	// Enable GPDMA channel 0
-	GPDMA_ChannelCmd(0, ENABLE);
+	// Habilito canal 0
+	GPDMA_ChannelCmd(CANAL_0, ENABLE);
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*---------------------------------------------------Utilidades----------------------------------------------------------------------------------------*/
-void change_state(void)
+/*
+ * Segun el estado del modo prendemos un led u otro
+ */
+void actualizar_estado(void)
 {
 	if (modo == LIBRE)
 	{
-		GPIO_SetValue(PINSEL_PORT_0, (LEDS_GREEN));
-		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_RED));
+		GPIO_SetValue(PINSEL_PORT_0, (LEDS_VERDE));
+		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_ROJO));
 	}
 	if (modo == OCUPADO)
 	{
-		GPIO_SetValue(PINSEL_PORT_0, (LEDS_RED));
-		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_GREEN));
+		GPIO_SetValue(PINSEL_PORT_0, (LEDS_ROJO));
+		GPIO_ClearValue(PINSEL_PORT_0, (LEDS_VERDE));
 	}
-
 	return;
 }
-
+/*
+ * Recibo el valor muestreado y obtengo la equivalencia a velocidad:
+ * 3.3V -> 40 m/s
+ *
+ * Si la velocidad es 0, activamos el counter de vehiculo parado.
+ */
 uint16_t Convertir_Distancia(uint16_t adc_value)
 {
 	uint16_t velocidad = 0;
@@ -415,28 +459,36 @@ uint16_t Convertir_Distancia(uint16_t adc_value)
 	}
 	else
 	{
-		if (car_state != STOP)
+		if (car_state != PARADO)
 		{
 			TIM_Cmd(LPC_TIM1, ENABLE);
-			car_state = STOP;
+			car_state = PARADO;
 		}
 	}
 	return velocidad;
 }
 
+/*
+ * Funciona como una funcion pow, pero adaptado para que no use floats
+ */
+
 uint_fast16_t potencia(uint8_t numero, uint_fast8_t potencia)
 {
-    uint16_t resultado = numero;
-    while (potencia > 1)
-    {
-        resultado = resultado * numero;
-        potencia--;
-    }
-    if(potencia==0){
-    	resultado=1;
-    }
-    return resultado;
+	uint16_t resultado = numero;
+	while (potencia > 1)
+	{
+		resultado = resultado * numero;
+		potencia--;
+	}
+	if(potencia==0){
+		resultado=1;
+	}
+	return resultado;
 }
+
+/*
+ * Formatea el arreglo mensaje con los datos de las variables globales
+ */
 
 void actualizar_mensaje(void)
 {
@@ -446,9 +498,9 @@ void actualizar_mensaje(void)
 			break;
 		case OCUPADO:
 			mensaje[1]=(uint8_t)'O';
-				break;
-		case STOP:
-			mensaje[1]=(uint8_t)'S';
+			break;
+		case PARADO:
+			mensaje[1]=(uint8_t)'P';
 			break;
 	}
 	uint16_t temp=tarifa;
@@ -462,10 +514,14 @@ void actualizar_mensaje(void)
 		temp-=temp1*(potencia(10, i-1));
 	}
 }
-uint8_t get_TeclaMatrical(void)
+
+uint8_t obtener_teclaMatricial(void)
 {
 	uint8_t fila=0,	columna=0;
 
+	/*
+	 * Voy pin a pin verificando cual es la fila apretada
+	 */
 	while (fila != 4)
 	{
 		if (GPIO_ReadValue(2) & (1 << fila))
@@ -474,13 +530,17 @@ uint8_t get_TeclaMatrical(void)
 		fila++;
 	}
 	if (fila >= 4)
-		return 4;
+		return 4; //Si no encontro devuelve una tecla sin uso
 
+	/*
+	 * Para obtener la columna barro un 0 por las columnas, cuando la fila
+	 * cambia de estado es porque encontre la columna apretada
+	 */
 	while (columna != 4)
 	{
 		LPC_GPIO2->FIOPIN0 = ~(1 << (4+columna));
 
-		if (!((FIO_ByteReadValue(2,0)) & IN_TECLADO))
+		if (!((FIO_ByteReadValue(2,0)) & ENTRADA_TECLADO))
 			break;
 
 		columna++;
@@ -488,7 +548,17 @@ uint8_t get_TeclaMatrical(void)
 	if (columna >= 4)
 		return 4;
 
-	FIO_ByteSetValue(2, 0,OUT_TECLADO);
+	FIO_ByteSetValue(2, 0,SALIDA_TECLADO);
+
+	/*
+	* De 1			1|2|3|A
+	* 				-------
+	* 				4|5|6|B
+	* 				-------
+	* 				7|8|9|C
+	*  				-------
+	* 				*|0|#|D hasta 15.
+	*/
 
 	return (fila*4 + columna);
 }
@@ -498,14 +568,18 @@ uint8_t get_TeclaMatrical(void)
 void EINT3_IRQHandler(void)
 {
 	GPIO_SetValue(PINSEL_PORT_0, (BUZZER));
-	uint8_t tecla = get_TeclaMatrical();
-	for(uint64_t i=0; i<500000 ; i++){}
+	uint8_t tecla = obtener_teclaMatricial();
+	for(uint64_t i=0; i<500000 ; i++){} //Pequeño delay para antirebote
 	GPIO_ClearValue(PINSEL_PORT_0, (BUZZER));
 	for(uint64_t i=0; i<500000 ; i++){}
 
-	tecla=teclado_matricial[tecla];
+	tecla=teclado_matricial[tecla]; //Del indice se obtiene el valor en el teclado
+
+	//Si es modo valido, lo cambia, sino, lo deja pasar
 	(tecla > 0 && tecla <= 3) ? (modo = tecla) : (modo = modo) ;
-	FIO_ByteSetMask(0, 0, (11<4), DISABLE);
+	/*
+	 * Un modo luz apagada en el boton 4
+	 */
 	if(tecla==4)
 	{
 		if(LED_ON_OFF)
@@ -515,15 +589,17 @@ void EINT3_IRQHandler(void)
 		}
 		else
 		{
-			change_state();
+			actualizar_estado();
 			LED_ON_OFF=1;
 		}
 	}
 
-	GPIO_ClearInt(PINSEL_PORT_2, IN_TECLADO);
+	GPIO_ClearInt(PINSEL_PORT_2, ENTRADA_TECLADO);
 	return;
 }
-
+/*
+ * Si interrumpe, aumenta el valor en una ficha
+ */
 void TIMER1_IRQHandler(void)
 {
 	tarifa += VALOR_FICHA;
@@ -532,6 +608,10 @@ void TIMER1_IRQHandler(void)
 
 	return;
 }
+
+/* 
+ * Simplemente obtengo el dato y lo convierto
+ */
 
 void ADC_IRQHandler(void)
 {
