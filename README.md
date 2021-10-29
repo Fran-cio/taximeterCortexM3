@@ -50,7 +50,7 @@ Configurado para contar 1 minuto y si se cumple, aumenta la tarifa una ficha.
 ### Timer 0
 Configurado para hacer toggle en el pin MAT0.1 cada 2hz o cada 0,5s con tal de obtener la frec de muestreo de 1s.
 
-> ### Caracteristicas extras
+> ### Caracteristicas extras.
 > * Un led que indica ocupacion (verde/rojo) que se activa con un boton.
 > * Un buzzer que indica cuando se apreto un boton.
 
