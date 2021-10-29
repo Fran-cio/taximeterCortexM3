@@ -45,7 +45,6 @@ uint8_t obtener_teclaMatricial(void);
 #define INPUT 0
 #define ENTRADA_TECLADO 0XF
 #define SALIDA_TECLADO (0XF << 4)
-
 #define CANAL_0 0
 #define LEDS_ROJO (1 << 4)
 #define LEDS_VERDE (1 << 5)
@@ -286,19 +285,7 @@ void configADC(void)
 
 	ADC_GlobalGetStatus(LPC_ADC, 1); //Bajo la bandera
 	NVIC_EnableIRQ(ADC_IRQn);
-	void SysTick_Handler(void) {
-		if(parpadeo){
-			parpadeo=0;
-			GPIO_ClearValue(PINSEL_PORT_0, (LEDS_ROJO));
-		}
-		else
-		{
-			parpadeo=1;
-			GPIO_SetValue(PINSEL_PORT_0, (LEDS_ROJO));
-		}
-		SYSTICK_ClearCounterFlag();
-		return;
-	}
+	
 	return;
 }
 
@@ -633,6 +620,7 @@ void EINT3_IRQHandler(void)
 	else if(tecla=0xD)
 	{
 		tarifa+=5*VALOR_FICHA;
+		actualizar_mensaje();
 	}
 
 	GPIO_ClearInt(PINSEL_PORT_2, ENTRADA_TECLADO);
