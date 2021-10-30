@@ -1,9 +1,30 @@
 from tkinter import *
 import time
 
-
-# DEVICE_FILE = "/dev/ttyUSB0" #check nombre /dev/usb
-DEVICE_FILE = "lala.txt"
+import serial
+import sys
+ 
+puerto = '/dev/ttyUSB0'
+#-------------------------
+#-- Abrir puerto serie
+#-------------------------
+try:
+        sg = serial.Serial(puerto, 9600)
+        sg.timeout = 1;
+ 
+except serial.SerialException:
+        #-- Error al abrir el puerto serie
+        sys.stderr.write("Error al abrir el puerto " +str(puerto) +"\n")
+        sys.exit(1)
+ 
+#-- Mostrar nombre del dispositivo serie utilizado
+print("Puerto: " +str(puerto))
+ 
+#-------------------------
+#-- Prueba del puerto
+#-------------------------
+ 
+#-- Enviar cadena de pruebas
 
 MODO_O = 'O'
 MODO_L = 'L'
@@ -77,15 +98,11 @@ def times_hora():
     hora.after(200,times_hora)
 
 def set_monto():
-    print("aca1")
-    file = open(DEVICE_FILE, "r")
-    value = file.read()
-    file.close()
-    print(value)
-
+    file = open(puerto,'r')
+    value = file.read(15);
+    
     if (value[0] == MODO_O):
         aux=value.split("$")
-        print(aux)
         tarifa.config(text=("$ "+aux[1]), bg="black",fg="red",font="Arial 15 bold") 
         state_ocupado.config(fg="red")   
         state_stop.config(fg="white") 
@@ -104,7 +121,7 @@ def set_monto():
         state_stop.config(fg="red") 
         state_libre.config(fg="white") 
 
-    tarifa.after(1000,set_monto)   
+    tarifa.after(10,set_monto)   
 
 
 root = Tk()

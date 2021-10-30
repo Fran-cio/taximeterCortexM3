@@ -60,7 +60,7 @@ uint8_t obtener_teclaMatricial(void);
 
 #define EDGE_RISING 0
 #define LONGITUD 16
-#define LONGITUD_MENSAJE 10
+#define LONGITUD_MENSAJE 16
 
 #define VELOCIDAD_MAX 40
 #define RESOLUCION 4096
@@ -92,7 +92,7 @@ uint8_t const teclado_matricial[LONGITUD] = {	1,2,3,0xA, \
 		7,8,9,0xC, \
 		0XE,0,0XE,0XD
 };
-uint8_t mensaje[LONGITUD_MENSAJE] = {"\rM   $0000"};
+uint8_t mensaje[] = {"\rM   $0000     "};
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*--------------------------------------------------------Programa-------------------------------------------------------------------------*/
@@ -541,7 +541,7 @@ void actualizar_mensaje(void)
 	{
 		temp1=temp/(potencia(10, i-1));
 
-		mensaje[sizeof(mensaje)-i]=temp1 + '0';
+		mensaje[10-i]=temp1 + '0';
 
 		temp-=temp1*(potencia(10, i-1));
 	}
