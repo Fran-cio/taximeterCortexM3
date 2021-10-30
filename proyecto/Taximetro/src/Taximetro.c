@@ -216,7 +216,7 @@ void confGPIO(void)
 	PinCfg.Pinmode = PINSEL_PINMODE_PULLDOWN;
 	PinCfg.Portnum = PINSEL_PORT_2;
 
-	/* entradas */
+	/* Entradas */
 
 	for (i = 0; i< 4; i++)
 	{
@@ -225,7 +225,7 @@ void confGPIO(void)
 	}
 	GPIO_SetDir(PINSEL_PORT_2, ENTRADA_TECLADO, INPUT); // configura los pines p2.0 a p2.3 como entradas
 
-	/* salidas */
+	/* Salidas */
 
 	PinCfg.Pinmode = PINSEL_PINMODE_PULLUP;
 	for (i = 4; i< 8; i++)
@@ -245,7 +245,8 @@ void confGPIO(void)
 
 	PinCfg.Pinnum = 5;
 	PINSEL_ConfigPin(&PinCfg);
-
+	
+	/* Buzzer */
 	PinCfg.Pinnum = 6;
 	PINSEL_ConfigPin(&PinCfg);
 
@@ -279,7 +280,7 @@ void configADC(void)
 	ADC_Init(LPC_ADC, F_MUESTREO); //ENCIENDO ADC
 	ADC_ChannelCmd(LPC_ADC, ADC_CHANNEL_0,ENABLE); //POR CANAL 0
 	ADC_StartCmd(LPC_ADC, ADC_START_ON_MAT01);    //START CON MATCH, DEBE MUESTREAR CADA 1 SEG
-	ADC_EdgeStartConfig(LPC_ADC, ADC_START_ON_RISING); //Arranca ṕr Mat0.1 en alto
+	ADC_EdgeStartConfig(LPC_ADC, ADC_START_ON_RISING); //Arranca por Mat0.1 en alto
 	ADC_BurstCmd(LPC_ADC, DISABLE);//Modo controlado
 	ADC_IntConfig(LPC_ADC, ADC_ADGINTEN, SET);//Activo las interrupciones
 
@@ -373,7 +374,7 @@ void confExtInt(void)
 void confUART(void)
 {
 	PINSEL_CFG_Type PinCfg;
-	//configuraci�n pin de Tx y Rx
+	//configuracion pin de Tx y Rx
 	PinCfg.Funcnum = PINSEL_FUNC_1;
 	PinCfg.OpenDrain = PINSEL_PINMODE_NORMAL;
 	PinCfg.Pinmode = PINSEL_PINMODE_PULLUP;
@@ -385,14 +386,14 @@ void confUART(void)
 
 	UART_CFG_Type UARTConfigStruct;
 	UART_FIFO_CFG_Type UARTFIFOConfigStruct;
-	//configuraci�n por defecto:
+	//configuracion por defecto:
 	UART_ConfigStructInit(&UARTConfigStruct);
-	//inicializa perif�rico
+	//inicializa periferico
 	UART_Init(LPC_UART0, &UARTConfigStruct);
 	UART_FIFOConfigStructInit(&UARTFIFOConfigStruct);
 	//Inicializa FIFO
 	UART_FIFOConfig(LPC_UART0, &UARTFIFOConfigStruct);
-	//Habilita transmisi�n
+	//Habilita transmision
 	UART_TxCmd(LPC_UART0, ENABLE);
 }
 void confDMA(void)
