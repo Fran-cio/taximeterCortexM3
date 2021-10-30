@@ -276,7 +276,7 @@ void configADC(void)
 	/*
 	 * Nuestro CCLK es de 100MHz y configuramos el divisor de periferico a 8
 	 * CCLK/divP = 100MHz/8 = 12,5MHz 
-	 * A todo esto, al utilizar el modo controlado necesito 65 ciclos de reloj
+	 * Al utilizar el modo controlado necesito 65 ciclos de reloj
 	 * para establecer la muestra.
 	 * 12,5MHz/65 = 195312 Hz, siendo la frecuencia de trabajo maxima configurable
 	 */
@@ -390,15 +390,10 @@ void confUART(void)
 
 	UART_CFG_Type UARTConfigStruct;
 	UART_FIFO_CFG_Type UARTFIFOConfigStruct;
-<<<<<<< HEAD
-	//configuracion por defecto
-	UART_ConfigStructInit(&UARTConfigStruct);
-	//inicializa periforico
-=======
+
 	//configuracion por defecto:
 	UART_ConfigStructInit(&UARTConfigStruct);
 	//inicializa periferico
->>>>>>> bf0ed8504b6a16e94a61132900e3c3c2c780199f
 	UART_Init(LPC_UART0, &UARTConfigStruct);
 
 	//configuro la FIFO para DMA
@@ -614,7 +609,7 @@ void delay(uint32_t tiempo_mS)
 	 *
 	 * Para simplificar calculos, el valor ingresado es directamente el valor en mS
 	 */
-	tiempo_mS = De_mS_A_Cuentas_For(tiempo);
+	tiempo_mS = De_mS_A_Cuentas_For(tiempo_mS);
 	for(uint32_t cont=0; cont<tiempo_mS;cont++);
 }
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
@@ -651,7 +646,7 @@ void EINT3_IRQHandler(void)
 	}
 
 	//Se puede 5 Fichas por exceso de peso o razon que sea
-	else if(tecla=0xD)
+	else if(tecla==0xD)
 	{
 		tarifa+=5*VALOR_FICHA;
 		actualizar_mensaje();
