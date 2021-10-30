@@ -220,7 +220,7 @@ void confGPIO(void)
 	PinCfg.Pinmode = PINSEL_PINMODE_PULLDOWN;
 	PinCfg.Portnum = PINSEL_PORT_2;
 
-	/* entradas */
+	/* Entradas */
 
 	for (i = 0; i< 4; i++)
 	{
@@ -229,7 +229,7 @@ void confGPIO(void)
 	}
 	GPIO_SetDir(PINSEL_PORT_2, ENTRADA_TECLADO, INPUT); // configura los pines p2.0 a p2.3 como entradas
 
-	/* salidas */
+	/* Salidas */
 
 	PinCfg.Pinmode = PINSEL_PINMODE_PULLUP;
 	for (i = 4; i< 8; i++)
@@ -249,7 +249,8 @@ void confGPIO(void)
 
 	PinCfg.Pinnum = 5;
 	PINSEL_ConfigPin(&PinCfg);
-
+	
+	/* Buzzer */
 	PinCfg.Pinnum = 6;
 	PINSEL_ConfigPin(&PinCfg);
 
@@ -283,7 +284,7 @@ void configADC(void)
 	ADC_Init(LPC_ADC, F_MUESTREO); //ENCIENDO ADC
 	ADC_ChannelCmd(LPC_ADC, ADC_CHANNEL_0,ENABLE); //POR CANAL 0
 	ADC_StartCmd(LPC_ADC, ADC_START_ON_MAT01);    //START CON MATCH, DEBE MUESTREAR CADA 1 SEG
-	ADC_EdgeStartConfig(LPC_ADC, ADC_START_ON_RISING); //Arranca ṕr Mat0.1 en alto
+	ADC_EdgeStartConfig(LPC_ADC, ADC_START_ON_RISING); //Arranca por Mat0.1 en alto
 	ADC_BurstCmd(LPC_ADC, DISABLE);//Modo controlado
 	ADC_IntConfig(LPC_ADC, ADC_ADGINTEN, SET);//Activo las interrupciones
 
@@ -389,9 +390,15 @@ void confUART(void)
 
 	UART_CFG_Type UARTConfigStruct;
 	UART_FIFO_CFG_Type UARTFIFOConfigStruct;
+<<<<<<< HEAD
 	//configuracion por defecto
 	UART_ConfigStructInit(&UARTConfigStruct);
 	//inicializa periforico
+=======
+	//configuracion por defecto:
+	UART_ConfigStructInit(&UARTConfigStruct);
+	//inicializa periferico
+>>>>>>> bf0ed8504b6a16e94a61132900e3c3c2c780199f
 	UART_Init(LPC_UART0, &UARTConfigStruct);
 
 	//configuro la FIFO para DMA
