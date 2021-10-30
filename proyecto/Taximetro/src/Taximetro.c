@@ -38,8 +38,11 @@ void actualizar_mensaje(void);
 uint8_t obtener_teclaMatricial(void);
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*---------------------------------------------------DEFINES----------------------------------------------------------------------------------------*/
-#define De_mS_uS(num) (num*100000)
+#define De_mS_uS(num) (num*1000)
 #define De_S_uS(num) (num*1000000)
+#define De_S_M(num) (num*60)
+#define VALOR_DE_MATCH_PARA_MUESTREAR_S(num) (num*10/2)
+#define De_mS_A_Cuentas_For(num) ((num*SystemCoreClock*10)/(1000*11))
 
 #define OUTPUT 1
 #define INPUT 0
@@ -50,7 +53,8 @@ uint8_t obtener_teclaMatricial(void);
 #define LEDS_VERDE (1 << 5)
 #define BUZZER (1 << 6)
 
-#define TIMEMUESTREO 1
+#define TIEMPO_FICHA_AUTO_DETENIDO_M 1
+#define TIEMPOMUESTREO_S 1
 #define F_MUESTREO 192307
 #define CLKPWR_PCLKSEL_CCLK_DIV_8 3
 
@@ -74,7 +78,7 @@ uint8_t obtener_teclaMatricial(void);
 /*--------------------------------------------------------Variables Globales-------------------------------------------------------------------------*/
 GPDMA_LLI_Type DMA_LLI_Struct;
 
-uint8_t static parpadeo=1;
+uint8_t static SYSTICK_FLAG=1;
 
 uint8_t static LED_ON_OFF=1;
 uint8_t static modo = LIBRE;
@@ -295,11 +299,11 @@ void config_timer_0(void)
 	TIM_MATCHCFG_Type    struct_match;
 
 	/*
-	 * configuro el timer para que aumente cada 1 ms
+	 * configuro el timer para que aumente cada 100 ms
 	 */
 
 	struct_config.PrescaleOption    =    TIM_PRESCALE_USVAL;
-	struct_config.PrescaleValue     =    De_mS_uS(1);
+	struct_config.PrescaleValue     =    De_mS_uS(100);
 
 	struct_match.MatchChannel       =    1;
 	struct_match.IntOnMatch         =    DISABLE; //deshabilitamos las interrupciones por timer
@@ -309,10 +313,10 @@ void config_timer_0(void)
 
 	/*
 	 * Si yo necesito muestrear cada 1 hz, la frecuencia de toogle debe ser del
-	 * doble, en decir la mitad de tiempo, 5mS
+	 * doble, en decir la mitad de tiempo, 500mS
 	 */
 
-	struct_match.MatchValue         =    5;
+	struct_match.MatchValue         =    VALOR_DE_MATCH_PARA_MUESTREAR_S(TIEMPOMUESTREO_S); //De esta manera obtengo que el match toggle cada la mitad del tiempo que quiera muestrear
 
 	TIM_Init(LPC_TIM0, TIM_TIMER_MODE, &struct_config); //se prende el timer0, se configura la division del clock del periferico, y se
 	//configura el timer como modo temporizador y ademas se retesea el contador y se lo saca del reset
@@ -341,7 +345,7 @@ void config_timer_1(void)
 	struct_match.ResetOnMatch       =    ENABLE;//resetea el contador del timer cuando se produce un match
 	struct_match.StopOnMatch        =    DISABLE; //no detiene el contador del timer cuando se produce un match
 	struct_match.ExtMatchOutputType =    TIM_EXTMATCH_NOTHING;
-	struct_match.MatchValue         =    60; //Match cada 1 minuto
+	struct_match.MatchValue         =    De_S_M(TIEMPO_FICHA_AUTO_DETENIDO_M); //Match cada 1 minuto
 
 	TIM_Init(LPC_TIM1, TIM_TIMER_MODE, &struct_config); //se prende el timer1, se configura la division del clock del periferico, y se
 	//configura el timer como modo temporizador y ademas se retesea el contador y se lo saca del reset
@@ -373,7 +377,7 @@ void confExtInt(void)
 void confUART(void)
 {
 	PINSEL_CFG_Type PinCfg;
-	//configuraci�n pin de Tx y Rx
+	//configuracion pin de Tx y Rx
 	PinCfg.Funcnum = PINSEL_FUNC_1;
 	PinCfg.OpenDrain = PINSEL_PINMODE_NORMAL;
 	PinCfg.Pinmode = PINSEL_PINMODE_PULLUP;
@@ -385,14 +389,20 @@ void confUART(void)
 
 	UART_CFG_Type UARTConfigStruct;
 	UART_FIFO_CFG_Type UARTFIFOConfigStruct;
-	//configuraci�n por defecto:
+	//configuracion por defecto
 	UART_ConfigStructInit(&UARTConfigStruct);
-	//inicializa perif�rico
+	//inicializa periforico
 	UART_Init(LPC_UART0, &UARTConfigStruct);
-	UART_FIFOConfigStructInit(&UARTFIFOConfigStruct);
+
+	//configuro la FIFO para DMA
+	UARTFIFOConfigStruct.FIFO_DMAMode = ENABLE;
+	UARTFIFOConfigStruct.FIFO_Level = UART_FIFO_TRGLEV0;
+	UARTFIFOConfigStruct.FIFO_ResetRxBuf = ENABLE;
+	UARTFIFOConfigStruct.FIFO_ResetTxBuf = ENABLE;
+
 	//Inicializa FIFO
 	UART_FIFOConfig(LPC_UART0, &UARTFIFOConfigStruct);
-	//Habilita transmisi�n
+	//Habilita transmision
 	UART_TxCmd(LPC_UART0, ENABLE);
 }
 void confDMA(void)
@@ -582,6 +592,24 @@ uint8_t obtener_teclaMatricial(void)
 
 	return (fila*4 + columna);
 }
+
+void delay(uint32_t tiempo_mS)
+{
+	/*
+	 * Cada ciclo for tarda 1.1*10 a la -7 segundos. Entonces hago la regla de 3
+	 *
+	 * 1.1/100M -> 	1
+	 * tiempo 	->	x
+	 *
+	 * entonces:
+	 *
+	 * x=tiempo*100M / 1.1 que para evitar el punto flotante hago = tiempo*100M*10 / 11.
+	 *
+	 * Para simplificar calculos, el valor ingresado es directamente el valor en mS
+	 */
+	tiempo_mS = De_mS_A_Cuentas_For(tiempo);
+	for(uint32_t cont=0; cont<tiempo_mS;cont++);
+}
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*---------------------------------------------------Handlers----------------------------------------------------------------------------------------*/
 
@@ -589,9 +617,8 @@ void EINT3_IRQHandler(void)
 {
 	GPIO_SetValue(PINSEL_PORT_0, (BUZZER));
 	uint8_t tecla = obtener_teclaMatricial();
-	for(uint64_t i=0; i<500000 ; i++){} //Pequeño delay para antirebote
+	delay(20); //El tiempo de debounce en mS
 	GPIO_ClearValue(PINSEL_PORT_0, (BUZZER));
-	for(uint64_t i=0; i<500000 ; i++){}
 
 	tecla=teclado_matricial[tecla]; //Del indice se obtiene el valor en el teclado
 
@@ -645,7 +672,7 @@ void ADC_IRQHandler(void)
 
 	ADC0Value = ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
 
-	distancia += Convertir_Distancia(ADC0Value) * TIMEMUESTREO;
+	distancia += Convertir_Distancia(ADC0Value) * TIEMPOMUESTREO_S;
 
 	ADC_GlobalGetStatus(LPC_ADC, 1);
 
@@ -654,9 +681,10 @@ void ADC_IRQHandler(void)
 /*
  * Si esta en modo PARADO, hace parpaderar el led
  */
-void SysTick_Handler(void) {
+void SysTick_Handler(void)
+{
 	if(LED_ON_OFF){
-		if(parpadeo<5)
+		if(SYSTICK_FLAG<5)
 		{
 			GPIO_ClearValue(PINSEL_PORT_0, (LEDS_ROJO));
 		}
@@ -665,10 +693,10 @@ void SysTick_Handler(void) {
 			GPIO_SetValue(PINSEL_PORT_0, (LEDS_ROJO));
 		}
 
-		parpadeo++;
+		SYSTICK_FLAG++;
 
-		if(parpadeo==10)
-			parpadeo=0;
+		if(SYSTICK_FLAG==10)
+			SYSTICK_FLAG=0;
 	}
 
 	SYSTICK_ClearCounterFlag();
