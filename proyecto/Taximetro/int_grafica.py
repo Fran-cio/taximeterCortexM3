@@ -1,30 +1,8 @@
 from tkinter import *
 import time
 
-import serial
-import sys
- 
-puerto = '/dev/ttyUSB0'
-#-------------------------
-#-- Abrir puerto serie
-#-------------------------
-try:
-        sg = serial.Serial(puerto, 9600)
-        sg.timeout = 1;
- 
-except serial.SerialException:
-        #-- Error al abrir el puerto serie
-        sys.stderr.write("Error al abrir el puerto " +str(puerto) +"\n")
-        sys.exit(1)
- 
-#-- Mostrar nombre del dispositivo serie utilizado
-print("Puerto: " +str(puerto))
- 
-#-------------------------
-#-- Prueba del puerto
-#-------------------------
- 
-#-- Enviar cadena de pruebas
+
+DEVICE_FILE = "/dev/ttyUSB0" #check nombre /dev/usb
 
 MODO_O = 'O'
 MODO_L = 'L'
@@ -98,23 +76,24 @@ def times_hora():
     hora.after(200,times_hora)
 
 def set_monto():
-    file = open(puerto,'r')
-    value = file.read(15);
-    
-    if (value[0] == MODO_O):
+    file = open(DEVICE_FILE, "r")
+    value = file.read()
+    file.close()
+
+    if (value[1] == MODO_O):
         aux=value.split("$")
         tarifa.config(text=("$ "+aux[1]), bg="black",fg="red",font="Arial 15 bold") 
         state_ocupado.config(fg="red")   
         state_stop.config(fg="white") 
         state_libre.config(fg="white") 
 
-    if (value[0] == MODO_L):
+    if (value[1] == MODO_L):
         tarifa.config(text="$ 0000", bg="black",fg="red",font="Arial 15 bold")
         state_ocupado.config(fg="white")   
         state_stop.config(fg="white") 
         state_libre.config(fg="red")          
 
-    if (value[0] == MODO_P):
+    if (value[1] == MODO_P):
         aux=value.split("$")
         tarifa.config(text=("$ "+aux[1]), bg="black",fg="red",font="Arial 15 bold")
         state_ocupado.config(fg="white")   

@@ -1,3 +1,3 @@
-./proyecto/FreeRTOS_TAD_logs
-./proyecto/AzureRTOS_TAD_logs
+./proyecto/FreeRTOS_TAD_logs/*
+./proyecto/AzureRTOS_TAD_logs/*
 ./proyecto/Taximetro/Taximetro LinkServer Debug.launch
