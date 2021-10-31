@@ -1,6 +1,7 @@
 from tkinter import *
 import time
-
+from PIL import Image
+from PIL import ImageTk
 
 DEVICE_FILE = "/dev/ttyUSB0" #check nombre /dev/usb
 
@@ -23,7 +24,7 @@ def set_interface():
     screen_width=screen_ancho/2000
     screen_height=screen_largo/1000
 
-    rect=frame.create_rectangle(screen_width*1350,250,70,80,width=15,outline="grey")
+    rect=frame.create_rectangle(screen_width*1350,screen_height*250,screen_width*70,screen_height*80,width=screen_width*15,outline="grey")
     frame.move(rect, screen_width*450, screen_height*400)
 
     Label(frame, text= "Tarifa", fg="red", bg="black", font="times 24 bold").place(x=screen_width*200, y=screen_height*200)
@@ -60,17 +61,19 @@ def set_interface():
     state_stop = Label(frame,text= "STOP",fg="white", bg="black", font="times 14 bold")
     state_stop.place(x=screen_width*1150,y=screen_height*550)
 
-    frame.image_tax= PhotoImage(file="./Img/taxi.png",width=int(screen_width*298), height=int(screen_height*300))
-    Label(frame, image=frame.image_tax, bg = 'black').place(x=screen_width*1570,y=screen_height*650)
+    image = Image.open("./Img/taxi.png")
+    resize_image = image.resize((int(200*screen_width), int(200*screen_height)))
+    frame.image_tax = ImageTk.PhotoImage(resize_image)
+    Label(frame, image=frame.image_tax, bg = 'black').place(x=screen_width*1570,y=screen_height*660)
 
-    frame.btn_start = PhotoImage(file="./Img/bRojo.png",width=int(screen_width*298), height=int(screen_height*300))
-    Label(frame, image=frame.btn_start, text='Start', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*502,y=screen_height*650)
+    image = Image.open("./Img/bRojo.png")
+    resize_image = image.resize((int(225*screen_width), int(220*screen_height)))
+    frame.btn_start = ImageTk.PhotoImage(resize_image)
+    Label(frame, image=frame.btn_start, text='Start', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*502,y=screen_height*655)
 
-    frame.btn_stop = PhotoImage(file="Img/bRojo.png",width=int(screen_width*298), height=int(screen_height*300))
-    Label(frame, image=frame.btn_stop, text='Stop', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*802,y=screen_height*650)
+    Label(frame, image=frame.btn_start, text='Stop', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*802,y=screen_height*655)
 
-    frame.btn_reset = PhotoImage(file="Img/bRojo.png",width=int(screen_width*298), height=int(screen_height*300))
-    Label(frame, image=frame.btn_reset, text='Reset', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*1102,y=screen_height*650)
+    Label(frame, image=frame.btn_start, text='Reset', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*1102,y=screen_height*655)
 
 def times_fecha():
 
