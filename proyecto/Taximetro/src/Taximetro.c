@@ -84,6 +84,7 @@ uint8_t static LED_ON_OFF=1;
 uint8_t static modo = LIBRE;
 uint16_t static tarifa = 0;
 uint16_t static distancia = 0;
+uint16_t static distancia_total = 0;
 uint8_t static car_state = 0;
 volatile uint16_t ADC0Value = 0;
 
@@ -92,7 +93,7 @@ uint8_t const teclado_matricial[LONGITUD] = {	1,2,3,0xA, \
 		7,8,9,0xC, \
 		0XE,0,0XE,0XD
 };
-uint8_t mensaje[] = {"\rM   $0000     "};
+uint8_t mensaje[] = {"\rM $0000 00000m"};
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*--------------------------------------------------------Programa-------------------------------------------------------------------------*/
@@ -149,6 +150,7 @@ void rutina_1(void)
 
 	tarifa = 0;
 	distancia=0;
+	distancia_total = 0;
 
 	actualizar_mensaje();
 	while (modo == LIBRE){}
@@ -174,8 +176,8 @@ void rutina_2(void)
 		{
 			tarifa += VALOR_FICHA;
 			distancia = 0;
-			actualizar_mensaje();
 		}
+		actualizar_mensaje();
 	}
 	return;
 }
@@ -541,10 +543,23 @@ void actualizar_mensaje(void)
 	{
 		temp1=temp/(potencia(10, i-1));
 
-		mensaje[10-i]=temp1 + '0';
+		mensaje[8-i]=temp1 + '0';
 
 		temp-=temp1*(potencia(10, i-1));
 	}
+
+	temp=distancia_total;
+	temp1=0;
+
+	for(uint8_t i=5;i>0;i--)
+	{
+		temp1=temp/(potencia(10, i-1));
+
+		mensaje[14-i]=temp1 + '0';
+
+		temp-=temp1*(potencia(10, i-1));
+	}
+
 }
 
 uint8_t obtener_teclaMatricial(void)
@@ -674,7 +689,9 @@ void ADC_IRQHandler(void)
 
 	ADC0Value = ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
 
-	distancia += Convertir_Distancia(ADC0Value) * TIEMPOMUESTREO_S;
+	uint16_t distancia_recorrida = Convertir_Distancia(ADC0Value) * TIEMPOMUESTREO_S;
+	distancia += distancia_recorrida;
+	distancia_total += distancia_recorrida;
 
 	ADC_GlobalGetStatus(LPC_ADC, 1);
 
