@@ -92,9 +92,9 @@ def set_interface():
     frame.btn_start = ImageTk.PhotoImage(resize_image)
     Label(frame, image=frame.btn_start, text='LIBRE', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*502,y=screen_height*655)
 
-    Label(frame, image=frame.btn_start, text='OCUPADO', font="times 17 bold",bg = 'black', compound='center').place(x=screen_width*802,y=screen_height*655)
+    Label(frame, image=frame.btn_start, text='OCUPADO', font="times 13 bold",bg = 'black', compound='center').place(x=screen_width*802,y=screen_height*655)
 
-    Label(frame, image=frame.btn_start, text='PARADO', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*1102,y=screen_height*655)
+    Label(frame, image=frame.btn_start, text='PARADO', font="times 15 bold",bg = 'black', compound='center').place(x=screen_width*1102,y=screen_height*655)
 
 def times_fecha():
 
@@ -116,16 +116,13 @@ def get_distance(value):
 
 def set_data():
 
-    print("hola1")
     datosASCII = sg.read(15) #Devuelve b
 	
-    print(datosASCII)
     i=0
 
     value = ""
     for i in datosASCII:
         value = value + chr(i)
-    print(value)
 
     if (value[1] == MODO_O):        
         tarifa.config(text=("$ "+get_monto(value)), bg="black",fg="red",font="Arial 15 bold")
