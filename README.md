@@ -58,12 +58,7 @@ Se puede agregar 5 fichas con la tecla D.
 
 **Entradas:** 	2.0,2.1,2.2,2.3 (*Teclado matricial*) (Todas pull-down)
 
-### PINSEL# Integrantes
-* Francisco Ciordia Cantarella
-* Andres Orionte
-* Facundo Carrizo
-
-
+### PINSEL
 **Func 0:** 	2.0,2.1,2.2,2.3,2.4,2.5,2.6,2.7 (*Teclado matricial*); 0.4,0.5 (*Led de O/L*); 0.6 (*Buzzer*)
 
 **Func 1:**	0.23 (*ADC 0.0*); 0.2,0.3 (*UART 0.0*)
