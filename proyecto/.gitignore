@@ -1,3 +1,3 @@
 /.metadata/
-./AzureRTOS_TAD_logs/
-./CMSISv2p00_LPC17xx/
+./AzureRTOS_TAD_logs/*
+./CMSISv2p00_LPC17xx/*
