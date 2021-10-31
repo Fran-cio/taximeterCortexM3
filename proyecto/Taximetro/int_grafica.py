@@ -1,21 +1,8 @@
 from tkinter import *
 import time
 
-import serial
-import sys
-puerto = '/dev/ttyUSB0'
-#-------------------------
-#-- Abrir puerto serie
-#-------------------------
-try:
-        sg = serial.Serial(puerto, 9600)
-        sg.timeout = 1;
-except serial.SerialException:
-        #-- Error al abrir el puerto serie
-        sys.stderr.write("Error al abrir el puerto " +str(puerto) +"\n")
-        sys.exit(1)
-#-- Mostrar nombre del dispositivo serie utilizado
-print("Puerto: " +str(puerto))
+
+DEVICE_FILE = "/dev/ttyUSB0" #check nombre /dev/usb
 
 MODO_O = 'O'
 MODO_L = 'L'
@@ -30,13 +17,21 @@ def set_interface():
     frame = Canvas(root,width=2000,height=1000,borderwidth=30,background = "black",relief="ridge")
     frame.pack(expand=YES, fill=BOTH)   
 
-    rect=frame.create_rectangle(700,250,70,30,width=15,outline="grey")
-    frame.move(rect, 50, 400)
+    rect=frame.create_rectangle(1350,250,70,80,width=15,outline="grey")
+    frame.move(rect, 450, 400)
 
-    Label(frame, text="TAXIMETRO - GRUPO 1", fg="red", bg="black", font="times 24 bold").place(x=250, y=50)
+    Label(frame, text= "Tarifa", fg="red", bg="black", font="times 24 bold").place(x=200, y=200)
+
+    Label(frame, text="TAXIMETRO", fg="red", bg="black", font="times 24 bold").place(x=800, y=50)
+
+    distance = Label(frame, text= "Distancia", fg="red", bg="black", font="times 24 bold")
+    distance.place(x=800, y=200)
+
+    distance_now = Label(frame,text= "100 KM",fg="red", bg="black",font="times 24 bold")
+    distance_now.place(x=800,y=300)
 
     monto = Label(frame, text= "Monto", fg="red", bg="black", font="times 24 bold")
-    monto.place(x=390, y=250)
+    monto.place(x=500, y=200)
 
     hora=Label(frame,font=("times",15,"bold"))
     hora.place(x=40, y=980)
@@ -45,16 +40,19 @@ def set_interface():
     fecha.place(x=40, y=940)
 
     tarifa = Label(frame,text= "$0000",fg="red", bg="black", font="times 24 bold")
-    tarifa.place(x=400,y=300)
+    tarifa.place(x=500,y=300)
+
+    tarifa_now = Label(frame,text= "1",fg="red", bg="black", font="times 24 bold")
+    tarifa_now.place(x=270,y=300)
 
     state_ocupado = Label(frame,text= "OCUPADO",fg="red", bg="black", font="times 14 bold")
-    state_ocupado.place(x=200,y=550)
+    state_ocupado.place(x=550,y=550)
 
     state_libre = Label(frame,text= "LIBRE",fg="white", bg="black", font="times 14 bold")
-    state_libre.place(x=400,y=550)
+    state_libre.place(x=1650,y=550)
 
     state_stop = Label(frame,text= "STOP",fg="white", bg="black", font="times 14 bold")
-    state_stop.place(x=600,y=550)
+    state_stop.place(x=1150,y=550)
 
     image_tax= PhotoImage(file="Img/taxi.png",width=298, height=300)
     Label(frame, image=image_tax, bg = 'black').place(x=1720,y=715)
@@ -78,24 +76,24 @@ def times_hora():
     hora.after(200,times_hora)
 
 def set_monto():
-    file = open(puerto,'r')
-    value = file.read(15)
+    file = open(DEVICE_FILE, "r")
+    value = file.read()
     file.close()
-    
-    if (value[0] == MODO_O):
+
+    if (value[1] == MODO_O):
         aux=value.split("$")
         tarifa.config(text=("$ "+aux[1]), bg="black",fg="red",font="Arial 15 bold") 
         state_ocupado.config(fg="red")   
         state_stop.config(fg="white") 
         state_libre.config(fg="white") 
 
-    if (value[0] == MODO_L):
+    if (value[1] == MODO_L):
         tarifa.config(text="$ 0000", bg="black",fg="red",font="Arial 15 bold")
         state_ocupado.config(fg="white")   
         state_stop.config(fg="white") 
         state_libre.config(fg="red")          
 
-    if (value[0] == MODO_P):
+    if (value[1] == MODO_P):
         aux=value.split("$")
         tarifa.config(text=("$ "+aux[1]), bg="black",fg="red",font="Arial 15 bold")
         state_ocupado.config(fg="white")   
