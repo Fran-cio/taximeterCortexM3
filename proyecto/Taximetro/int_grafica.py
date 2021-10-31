@@ -41,10 +41,10 @@ def set_interface():
     monto.place(x=screen_width*500, y=screen_height*200)
 
     hora=Label(frame,font=("times",15,"bold"))
-    hora.place(x=screen_width*40, y=screen_height*880)
+    hora.place(x=screen_width*50, y=screen_height*840)
 
     fecha=Label(frame,font=("times",15,"bold"))
-    fecha.place(x=screen_width*40, y=screen_height*840)
+    fecha.place(x=screen_width*50, y=screen_height*800)
 
     tarifa = Label(frame,text= "$0000",fg="red", bg="black", font="times 24 bold")
     tarifa.place(x=screen_width*500,y=screen_height*300)
