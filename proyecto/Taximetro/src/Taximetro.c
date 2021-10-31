@@ -7,7 +7,7 @@ Description : Un taximetro hecho para el integrador de Digitales 3
 */
 /*
  * En el repositorio se ven diagramas y explicaciones de cada elemento del proyecto
- * videos de funcionamiento e imagenes:
+ * videos de funcionamiento e imagenes junto con el informe:
  * https://github.com/Fran-cio/Tp_digital_3-Taximetro
  */
 
