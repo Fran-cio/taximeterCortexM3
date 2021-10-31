@@ -3,16 +3,37 @@ import time
 from PIL import Image
 from PIL import ImageTk
 
+import serial
+import sys
+ 
+puerto = '/dev/ttyUSB0'
+#-------------------------
+#-- Abrir puerto serie
+#-------------------------
+try:
+        sg = serial.Serial(puerto, 9600)
+        sg.timeout = 1;
+ 
+except serial.SerialException:
+        #-- Error al abrir el puerto serie
+        sys.stderr.write("Error al abrir el puerto " +str(puerto) +"\n")
+        sys.exit(1)
+ 
+#-- Mostrar nombre del dispositivo serie utilizado
+print("Puerto: " +str(puerto))
+ 
+#-------------------------
+#-- Prueba del puerto
+#-------------------------
+ 
+#-- Enviar cadena de pruebas
+
+
 DEVICE_FILE = "/dev/ttyUSB0" #check nombre /dev/usb
 
 MODO_O = 'O'
 MODO_L = 'L'
 MODO_P = 'P'
-
-root = Tk()
-
-screen_ancho = root.winfo_screenwidth()
-screen_largo = root.winfo_screenheight()
 
 def set_interface():    
 
@@ -34,7 +55,7 @@ def set_interface():
     distance = Label(frame, text= "Distancia", fg="red", bg="black", font="times 24 bold")
     distance.place(x=screen_width*800, y=screen_height*200)
 
-    distance_now = Label(frame,text= "100 KM",fg="red", bg="black",font="times 24 bold")
+    distance_now = Label(frame,text= " 0000 m",fg="red", bg="black",font="times 24 bold")
     distance_now.place(x=screen_width*800,y=screen_height*300)
 
     monto = Label(frame, text= "Monto", fg="red", bg="black", font="times 24 bold")
@@ -58,7 +79,7 @@ def set_interface():
     state_libre = Label(frame,text= "LIBRE",fg="white", bg="black", font="times 14 bold")
     state_libre.place(x=screen_width*1650,y=screen_height*550)
 
-    state_stop = Label(frame,text= "STOP",fg="white", bg="black", font="times 14 bold")
+    state_stop = Label(frame,text= "PARADO",fg="white", bg="black", font="times 14 bold")
     state_stop.place(x=screen_width*1150,y=screen_height*550)
 
     image = Image.open("./Img/taxi.png")
@@ -69,11 +90,11 @@ def set_interface():
     image = Image.open("./Img/bRojo.png")
     resize_image = image.resize((int(225*screen_width), int(220*screen_height)))
     frame.btn_start = ImageTk.PhotoImage(resize_image)
-    Label(frame, image=frame.btn_start, text='Start', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*502,y=screen_height*655)
+    Label(frame, image=frame.btn_start, text='LIBRE', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*502,y=screen_height*655)
 
-    Label(frame, image=frame.btn_start, text='Stop', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*802,y=screen_height*655)
+    Label(frame, image=frame.btn_start, text='OCUPADO', font="times 17 bold",bg = 'black', compound='center').place(x=screen_width*802,y=screen_height*655)
 
-    Label(frame, image=frame.btn_start, text='Reset', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*1102,y=screen_height*655)
+    Label(frame, image=frame.btn_start, text='PARADO', font="times 20 bold",bg = 'black', compound='center').place(x=screen_width*1102,y=screen_height*655)
 
 def times_fecha():
 
@@ -84,39 +105,62 @@ def times_hora():
     hora.config(text=time.strftime("Hora: %H:%M:%S"), bg="black",fg="red",font="Arial 15 bold")
     hora.after(200,times_hora)
 
-def set_monto():
-    file = open(DEVICE_FILE, "r")
-    value = file.read()
-    file.close()
+def get_monto(value):
+	string = ' '
+	string = value[4]+(value[5])+value[6]+value[7]
+	return string
+def get_distance(value):
+	string = ' '
+	string = value[9]+value[10]+value[11]+value[12]+value[13]
+	return string
 
-    if (value[1] == MODO_O):
-        aux=value.split("$")
-        tarifa.config(text=("$ "+aux[1]), bg="black",fg="red",font="Arial 15 bold") 
+def set_data():
+
+    print("hola1")
+    datosASCII = sg.read(15) #Devuelve b
+	
+    print(datosASCII)
+    i=0
+
+    value = ""
+    for i in datosASCII:
+        value = value + chr(i)
+    print(value)
+
+    if (value[1] == MODO_O):        
+        tarifa.config(text=("$ "+get_monto(value)), bg="black",fg="red",font="Arial 15 bold")
+        distance_now.config(text=(" "+get_distance(value)+" m"), bg="black",fg="red",font="Arial 15 bold") 
         state_ocupado.config(fg="red")   
         state_stop.config(fg="white") 
         state_libre.config(fg="white") 
 
     if (value[1] == MODO_L):
         tarifa.config(text="$ 0000", bg="black",fg="red",font="Arial 15 bold")
+        distance_now.config(text=(" 00000 m"), bg="black",fg="red",font="Arial 15 bold") 
         state_ocupado.config(fg="white")   
         state_stop.config(fg="white") 
         state_libre.config(fg="red")          
 
     if (value[1] == MODO_P):
         aux=value.split("$")
-        tarifa.config(text=("$ "+aux[1]), bg="black",fg="red",font="Arial 15 bold")
+        tarifa.config(text=("$ "+get_monto(value)), bg="black",fg="red",font="Arial 15 bold")
+        distance_now.config(text=(" "+get_distance(value)+" m"), bg="black",fg="red",font="Arial 15 bold") 
         state_ocupado.config(fg="white")   
         state_stop.config(fg="red") 
         state_libre.config(fg="white") 
 
-    tarifa.after(10,set_monto)   
+    tarifa.after(10,set_data)   
+ 	   
+root = Tk()
 
+screen_ancho = root.winfo_screenwidth()
+screen_largo = root.winfo_screenheight()
 
 set_interface()
 
 times_hora()
 times_fecha()
-#set_monto()
+set_data()
 
 
 mainloop()
