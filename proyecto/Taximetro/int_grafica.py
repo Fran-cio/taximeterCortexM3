@@ -14,7 +14,7 @@ def set_interface():
     global distance_now, hora, fecha,tarifa, state_ocupado, state_libre, state_stop
 
     root.title("TAXIMETRO")
-    frame = Canvas(root,width=2000,height=1000,borderwidth=30,background = "black",relief="ridge")
+    frame = Canvas(root,width=1920,height=1080,borderwidth=30,background = "black",relief="ridge")
     frame.pack(expand=YES, fill=BOTH)   
 
     rect=frame.create_rectangle(1350,250,70,80,width=15,outline="grey")
@@ -54,17 +54,17 @@ def set_interface():
     state_stop = Label(frame,text= "STOP",fg="white", bg="black", font="times 14 bold")
     state_stop.place(x=1150,y=550)
 
-    image_tax= PhotoImage(file="Img/taxi.png",width=298, height=300)
-    Label(frame, image=image_tax, bg = 'black').place(x=1720,y=715)
+    frame.image_tax= PhotoImage(file="./Img/taxi.png",width=298, height=300)
+    Label(frame, image=frame.image_tax, bg = 'black').place(x=1570,y=680)
 
-    btn_start = PhotoImage(file="Img/bRojo.png",width=298, height=300)
-    Label(frame, image=btn_start, text='Start', font="times 20 bold",bg = 'black', compound='center').place(x=502,y=715)
+    frame.btn_start = PhotoImage(file="./Img/bRojo.png",width=298, height=300)
+    Label(frame, image=frame.btn_start, text='Start', font="times 20 bold",bg = 'black', compound='center').place(x=502,y=685)
 
-    btn_stop = PhotoImage(file="Img/bRojo.png",width=298, height=300)
-    Label(frame, image=btn_stop, text='Stop', font="times 20 bold",bg = 'black', compound='center').place(x=802,y=715)
+    frame.btn_stop = PhotoImage(file="Img/bRojo.png",width=298, height=300)
+    Label(frame, image=frame.btn_stop, text='Stop', font="times 20 bold",bg = 'black', compound='center').place(x=802,y=685)
 
-    btn_reset = PhotoImage(file="Img/bRojo.png",width=298, height=300)
-    Label(frame, image=btn_reset, text='Reset', font="times 20 bold",bg = 'black', compound='center').place(x=1102,y=715)
+    frame.btn_reset = PhotoImage(file="Img/bRojo.png",width=298, height=300)
+    Label(frame, image=frame.btn_reset, text='Reset', font="times 20 bold",bg = 'black', compound='center').place(x=1102,y=685)
 
 def times_fecha():
 
