@@ -5,29 +5,28 @@ from PIL import ImageTk
 
 import serial
 import sys
- 
+
 puerto = '/dev/ttyUSB0'
 #-------------------------
 #-- Abrir puerto serie
 #-------------------------
 try:
-        sg = serial.Serial(puerto, 9600)
-        sg.timeout = 1;
- 
+    sg = serial.Serial(puerto, 9600)
+    sg.timeout = 1;
+
 except serial.SerialException:
-        #-- Error al abrir el puerto serie
-        sys.stderr.write("Error al abrir el puerto " +str(puerto) +"\n")
-        sys.exit(1)
- 
+    #-- Error al abrir el puerto serie
+    sys.stderr.write("Error al abrir el puerto " +str(puerto) +"\n")
+    sys.exit(1)
+
 #-- Mostrar nombre del dispositivo serie utilizado
 print("Puerto: " +str(puerto))
- 
+
 #-------------------------
 #-- Prueba del puerto
 #-------------------------
- 
-#-- Enviar cadena de pruebas
 
+#-- Enviar cadena de pruebas
 
 DEVICE_FILE = "/dev/ttyUSB0" #check nombre /dev/usb
 
@@ -35,13 +34,13 @@ MODO_O = 'O'
 MODO_L = 'L'
 MODO_P = 'P'
 
-def set_interface():    
+def set_interface():
 
     global distance_now, hora, fecha,tarifa, state_ocupado, state_libre, state_stop
 
     root.title("TAXIMETRO")
     frame = Canvas(root,width=screen_ancho,height=screen_largo,borderwidth=30,background = "black",relief="ridge")
-    frame.pack(expand=YES, fill=BOTH)   
+    frame.pack(expand=YES, fill=BOTH)
     screen_width=screen_ancho/2000
     screen_height=screen_largo/1000
 
@@ -101,53 +100,53 @@ def times_fecha():
     fecha.config(text=time.strftime("Fecha: %m/%d/%Y"), bg="black",fg="red",font="Arial 15 bold")
     fecha.after(200,times_fecha)
 
-def times_hora():   
+def times_hora():
     hora.config(text=time.strftime("Hora: %H:%M:%S"), bg="black",fg="red",font="Arial 15 bold")
     hora.after(200,times_hora)
 
 def get_monto(value):
-	string = ' '
-	string = value[4]+(value[5])+value[6]+value[7]
-	return string
+    string = ' '
+    string = value[4]+(value[5])+value[6]+value[7]
+    return string
 def get_distance(value):
-	string = ' '
-	string = value[9]+value[10]+value[11]+value[12]+value[13]
-	return string
+    string = ' '
+    string = value[9]+value[10]+value[11]+value[12]+value[13]
+    return string
 
 def set_data():
 
     datosASCII = sg.read(15) #Devuelve b
-	
+
     i=0
 
     value = ""
     for i in datosASCII:
         value = value + chr(i)
 
-    if (value[1] == MODO_O):        
+    if (value[1] == MODO_O):
         tarifa.config(text=("$ "+get_monto(value)), bg="black",fg="red",font="Arial 15 bold")
-        distance_now.config(text=(" "+get_distance(value)+" m"), bg="black",fg="red",font="Arial 15 bold") 
-        state_ocupado.config(fg="red")   
-        state_stop.config(fg="white") 
-        state_libre.config(fg="white") 
+        distance_now.config(text=(" "+get_distance(value)+" m"), bg="black",fg="red",font="Arial 15 bold")
+        state_ocupado.config(fg="red")
+        state_stop.config(fg="white")
+        state_libre.config(fg="white")
 
     if (value[1] == MODO_L):
         tarifa.config(text="$ 0000", bg="black",fg="red",font="Arial 15 bold")
-        distance_now.config(text=(" 00000 m"), bg="black",fg="red",font="Arial 15 bold") 
-        state_ocupado.config(fg="white")   
-        state_stop.config(fg="white") 
-        state_libre.config(fg="red")          
+        distance_now.config(text=(" 00000 m"), bg="black",fg="red",font="Arial 15 bold")
+        state_ocupado.config(fg="white")
+        state_stop.config(fg="white")
+        state_libre.config(fg="red")
 
     if (value[1] == MODO_P):
         aux=value.split("$")
         tarifa.config(text=("$ "+get_monto(value)), bg="black",fg="red",font="Arial 15 bold")
-        distance_now.config(text=(" "+get_distance(value)+" m"), bg="black",fg="red",font="Arial 15 bold") 
-        state_ocupado.config(fg="white")   
-        state_stop.config(fg="red") 
-        state_libre.config(fg="white") 
+        distance_now.config(text=(" "+get_distance(value)+" m"), bg="black",fg="red",font="Arial 15 bold")
+        state_ocupado.config(fg="white")
+        state_stop.config(fg="red")
+        state_libre.config(fg="white")
 
-    tarifa.after(10,set_data)   
- 	   
+    tarifa.after(10,set_data)
+
 root = Tk()
 
 screen_ancho = root.winfo_screenwidth()
