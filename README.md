@@ -7,7 +7,9 @@ Este se implemeta en C con el microcontrolador CORTEX M3 LPC1769.
 * Andres Orionte
 * Facundo Carrizo
 
-Puede ver una [vista fisica del proyecto](https://raw.githubusercontent.com/Fran-cio/Tp_digital_3-Taximetro/main/Imagen/vista_fisica.jpeg "vista fisica") y tambien un [video de funcionamiento](https://drive.google.com/file/d/1tw0ZERd9iwbVUo5fkDgzphwf7YSBESpg/view?usp=sharing "video").
+Puede ver una [vista fisica](https://raw.githubusercontent.com/Fran-cio/Tp_digital_3-Taximetro/main/Imagen/vista_fisica.jpeg "vista fisica") y [logica](https://raw.githubusercontent.com/Fran-cio/Tp_digital_3-Taximetro/main/Imagen/vista_logica.jpeg "vista logica") del proyecto.
+
+Tambien se adjunta un [video de funcionamiento](https://drive.google.com/file/d/1tw0ZERd9iwbVUo5fkDgzphwf7YSBESpg/view?usp=sharing "video").
 
 # Requerimentos
 * La tarifa consiste en $ 90 al momento de iniciar el viaje.
