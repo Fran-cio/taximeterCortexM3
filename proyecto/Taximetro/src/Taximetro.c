@@ -205,6 +205,12 @@ void rutina_3(void)
 
 	SYSTICK_Cmd(1);
 	SYSTICK_IntCmd(1);
+	/*
+	 * El systick es un contador de 2^24.
+	 * Entonces el valor maximo de segundos que tarda en interrumpir es de:
+	 * 2^24/CCLK=0.167 s para el CCLK de 100e6.
+	 * Colocamos 150ms=0.150s para fines de calculos redondos.
+	 */
 	SYSTICK_InternalInit(150);
 
 	while (modo == PARADO){}
@@ -704,6 +710,9 @@ void ADC_IRQHandler(void)
 }
 /*
  * Si esta en modo PARADO, hace parpaderar el led
+ *
+ * En particular se hacen 5 interrupciones con el led apagado y 5 con el led 
+ * prendido. Es decir, el led prende y apaga cada 150 ms * 5= 750 ms.
  */
 void SysTick_Handler(void)
 {
