@@ -7,6 +7,10 @@ Este se implemeta en C con el microcontrolador CORTEX M3 LPC1769.
 * Andres Orionte
 * Facundo Carrizo
 
+Puede ver una vista [fisica](https://raw.githubusercontent.com/Fran-cio/Tp_digital_3-Taximetro/main/Imagen/vista_fisica.jpeg "vista fisica") y [logica](https://raw.githubusercontent.com/Fran-cio/Tp_digital_3-Taximetro/main/Imagen/vista_logica.jpeg "vista logica") del proyecto.
+
+Tambien se adjunta un [video de funcionamiento](https://drive.google.com/file/d/1tw0ZERd9iwbVUo5fkDgzphwf7YSBESpg/view?usp=sharing "video").
+
 # Requerimentos
 * La tarifa consiste en $ 90 al momento de iniciar el viaje.
 * $9 por cada 200 metros de recorrido o minuto de espera en caso de estar el vehículo detenido.
@@ -56,12 +60,7 @@ Se puede agregar 5 fichas con la tecla D.
 
 **Entradas:** 	2.0,2.1,2.2,2.3 (*Teclado matricial*) (Todas pull-down)
 
-### PINSEL# Integrantes
-* Francisco Ciordia Cantarella
-* Andres Orionte
-* Facundo Carrizo
-
-
+### PINSEL
 **Func 0:** 	2.0,2.1,2.2,2.3,2.4,2.5,2.6,2.7 (*Teclado matricial*); 0.4,0.5 (*Led de O/L*); 0.6 (*Buzzer*)
 
 **Func 1:**	0.23 (*ADC 0.0*); 0.2,0.3 (*UART 0.0*)
