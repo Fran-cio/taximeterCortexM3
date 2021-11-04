@@ -11,6 +11,8 @@ Puede ver una vista [fisica](https://raw.githubusercontent.com/Fran-cio/Tp_digit
 
 Tambien se adjunta un [video de funcionamiento](https://drive.google.com/file/d/1tw0ZERd9iwbVUo5fkDgzphwf7YSBESpg/view?usp=sharing "video").
 
+[Justificado de calculos](https://github.com/Fran-cio/Tp_digital_3-Taximetro/blob/main/Justificado_de_Calculos.pdf "Calculos").
+
 # Requerimentos
 * La tarifa consiste en $ 90 al momento de iniciar el viaje.
 * $9 por cada 200 metros de recorrido o minuto de espera en caso de estar el vehículo detenido.
