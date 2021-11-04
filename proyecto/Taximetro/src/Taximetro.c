@@ -47,7 +47,7 @@ uint8_t obtener_teclaMatricial(void);
 #define De_S_uS(num) (num*1000000)
 #define De_S_M(num) (num*60)
 #define VALOR_DE_MATCH_PARA_MUESTREAR_S(num) (num*10/2)
-#define De_mS_A_Cuentas_For(num) ((num*SystemCoreClock*10)/(1000*11))
+#define De_mS_A_Cuentas_For(num) ((num*SystemCoreClock)/(1000*11))
 
 #define OUTPUT 1
 #define INPUT 0
@@ -493,7 +493,7 @@ void actualizar_estado(void)
  *
  * Si la velocidad es 0, activamos el counter de vehiculo parado.
  */
-uint16_t Convertir_Distancia(uint16_t adc_value)
+uint16_t Convertir_a_velocidad(uint16_t adc_value)
 {
 	uint16_t velocidad = 0;
 	velocidad = (adc_value * VELOCIDAD_MAX) / RESOLUCION;
@@ -525,7 +525,8 @@ uint_fast16_t potencia(uint8_t numero, uint_fast8_t potencia)
 		resultado = resultado * numero;
 		potencia--;
 	}
-	if(potencia==0){
+	if(potencia==0)
+	{
 		resultado=1;
 	}
 	return resultado;
@@ -537,7 +538,8 @@ uint_fast16_t potencia(uint8_t numero, uint_fast8_t potencia)
 
 void actualizar_mensaje(void)
 {
-	switch (modo) {
+	switch (modo)
+	{
 		case LIBRE:
 			mensaje[1]=(uint8_t)'L';
 			break;
@@ -700,7 +702,7 @@ void ADC_IRQHandler(void)
 
 	ADC0Value = ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
 
-	uint16_t distancia_recorrida = Convertir_Distancia(ADC0Value) * TIEMPOMUESTREO_S;
+	uint16_t distancia_recorrida = Convertir_a_velocidad(ADC0Value) * TIEMPOMUESTREO_S;
 	distancia += distancia_recorrida;
 	distancia_total += distancia_recorrida;
 

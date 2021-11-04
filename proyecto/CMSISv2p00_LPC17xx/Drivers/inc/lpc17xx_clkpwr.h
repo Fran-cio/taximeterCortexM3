@@ -28,7 +28,7 @@
 #define LPC17XX_CLKPWR_H_
 
 /* Includes ------------------------------------------------------------------- */
-#include "LPC17xx.h"
+#include "LPC17xx.h".h"
 #include "lpc_types.h"
 
 #ifdef __cplusplus
