@@ -42,7 +42,7 @@
     <a href="https://github.com/Fran-cio/taximeterCortexM3"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/Fran-cio/taximeterCortexM3/taximeterCortexM3">View Demo</a>
+    <a href="https://github.com/Fran-cio/taximeterCortexM3">View Demo</a>
     ·
     <a href="https://github.com/Fran-cio/taximeterCortexM3/issues">Report Bug</a>
     ·
